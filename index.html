@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="图解伴侣">
+<title>图解伴侣</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root{
+    --ink:#22303E; --ink-soft:#5C6B7A; --line:#DDE3E9;
+    --panel:rgba(255,255,255,.93);
+    --denim:#3B5B92; --denim-deep:#2C4470;
+    --hl-y:rgba(255,214,0,.35);  --hl-y-b:rgba(214,168,0,.9);
+    --hl-p:rgba(255,99,164,.30); --hl-p-b:rgba(224,62,130,.9);
+    --hl-g:rgba(72,199,142,.30); --hl-g-b:rgba(35,158,101,.9);
+    --yarn-1:#3B5B92; --yarn-2:#C4536A; --yarn-3:#3E8E6D; --yarn-4:#B07A2E; --yarn-5:#7A5CA8;
+    --mono:"SF Mono", ui-monospace, Menlo, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:#E8ECF0; color:var(--ink);
+    -webkit-text-size-adjust:100%;
+    -webkit-touch-callout:none;      /* iPad 长按不弹系统菜单 */
+  }
+
+  #viewer{
+    position:fixed; inset:0; overflow:auto;
+    display:flex; justify-content:safe center; align-items:flex-start;
+    padding:8px;
+    touch-action:pan-x pan-y;        /* 允许单指滚动，双指缩放交给我们自己处理 */
+    -webkit-overflow-scrolling:touch;
+  }
+  #stage{position:relative; flex:none; background:#fff; box-shadow:0 2px 16px rgba(34,48,62,.15);}
+  #stage canvas{display:block; user-select:none; -webkit-user-drag:none;}
+
+  /* ── 顶部工具条 ── */
+  #topbar{
+    position:fixed; top:0; left:0; right:0; z-index:40;
+    display:flex; align-items:center; gap:6px;
+    padding:6px 10px; padding-top:calc(6px + env(safe-area-inset-top));
+    background:var(--panel);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+    transition:transform .2s ease; flex-wrap:wrap;
+  }
+  #topbar.hidden{transform:translateY(-110%);}
+  .btn{
+    border:1px solid var(--line); background:#fff; color:var(--ink);
+    padding:0 11px; height:38px; border-radius:9px; font-size:13px; cursor:pointer;
+    font-family:inherit; display:inline-flex; align-items:center; gap:5px;
+    white-space:nowrap; touch-action:manipulation;   /* 关掉 iPad 双击缩放 */
+  }
+  .btn:hover{background:#F5F7FA;}
+  .btn:focus-visible{outline:2px solid var(--denim); outline-offset:1px;}
+  .btn.primary{background:var(--denim); border-color:var(--denim); color:#fff;}
+  .btn.on{background:#EAF0F8; border-color:var(--denim); color:var(--denim);}
+  .sep{width:1px; height:20px; background:var(--line); margin:0 2px;}
+  #pageInfo{font-size:13px; color:var(--ink-soft); font-variant-numeric:tabular-nums; min-width:52px; text-align:center;}
+  .hl-dot{width:14px; height:14px; border-radius:3px; display:inline-block;}
+
+  #peek{
+    position:fixed; top:calc(10px + env(safe-area-inset-top)); left:10px; z-index:39;
+    width:44px; height:44px; border-radius:50%;
+    background:var(--panel); border:1px solid var(--line);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+    cursor:pointer; font-size:16px; display:none; align-items:center; justify-content:center;
+    box-shadow:0 2px 10px rgba(34,48,62,.15); touch-action:manipulation;
+  }
+  body.focus #peek{display:flex;}
+
+  /* ── 标尺：线仍是 2px，热区放大到 44px ── */
+  .ruler{position:absolute; z-index:6; touch-action:none;}
+  .ruler.h{left:-8px; right:-8px; height:2px; background:var(--hl-y-b);}
+  .ruler.v{top:-8px; bottom:-8px; width:2px; background:var(--hl-p-b);}
+  .ruler::before{content:""; position:absolute; cursor:grab;}
+  .ruler.h::before{left:0; right:0; top:-21px; height:44px;}   /* 44px 触控热区 */
+  .ruler.v::before{top:0; bottom:0; left:-21px; width:44px;}
+  .ruler:active::before{cursor:grabbing;}
+  .ruler .tab{
+    position:absolute; background:#fff; border:1px solid var(--line);
+    border-radius:22px; font-size:11px; color:var(--ink-soft);
+    user-select:none; white-space:nowrap; cursor:grab;
+    box-shadow:0 1px 5px rgba(0,0,0,.18);
+    display:flex; align-items:center; gap:0; overflow:hidden;
+  }
+  .ruler.h .tab{left:2px; top:-20px;}
+  .ruler.v .tab{top:2px; left:8px; flex-direction:column;}
+  .ruler .tab .lbl{padding:0 6px; font-size:11px;}
+  .ruler.v .tab .lbl{padding:4px 6px;}
+  /* 微调按钮：40px 见方，手指点得中 */
+  .ruler .fine{
+    width:40px; height:38px; border:none; background:none; cursor:pointer;
+    color:var(--denim); font-size:13px; touch-action:manipulation;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .ruler.v .tab .fine{height:36px; width:38px;}
+  .ruler .fine:active{background:#EAF0F8;}
+  .ruler.gone{display:none;}
+
+  /* ── 高亮便签贴：改为「点选」而非 hover ── */
+  #hlLayer{position:absolute; inset:0; z-index:4;}
+  #hlLayer.drawing{cursor:crosshair; z-index:7; touch-action:none;}
+  .hl{position:absolute; border-radius:3px; touch-action:none; cursor:grab;}
+  .hl.sel{box-shadow:0 0 0 2px rgba(59,91,146,.55);}
+  .hl .x, .hl .rs{display:none; touch-action:manipulation;}
+  .hl.sel .x, .hl.sel .rs{display:flex;}
+  .hl .x{
+    position:absolute; top:-15px; right:-15px; width:30px; height:30px;
+    border-radius:50%; background:#fff; border:1px solid var(--line);
+    font-size:15px; align-items:center; justify-content:center; cursor:pointer;
+    color:var(--ink-soft); box-shadow:0 1px 4px rgba(0,0,0,.2);
+  }
+  .hl .rs{
+    position:absolute; right:-13px; bottom:-13px; width:26px; height:26px;
+    border-radius:6px; background:#fff; border:1px solid var(--line);
+    cursor:nwse-resize; align-items:center; justify-content:center;
+    color:var(--ink-soft); font-size:11px; box-shadow:0 1px 4px rgba(0,0,0,.2);
+  }
+
+  /* ── 漂浮计数器 ── */
+  #floaters{position:fixed; inset:0; pointer-events:none; z-index:30;}
+  .counter{
+    position:absolute; pointer-events:auto; width:152px;
+    background:var(--panel);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+    border:1px solid var(--line); border-radius:14px;
+    box-shadow:0 3px 14px rgba(34,48,62,.2);
+    overflow:hidden; user-select:none;
+    touch-action:none;               /* 整卡都能拖，不触发页面滚动 */
+  }
+  .counter.dragging{box-shadow:0 8px 26px rgba(34,48,62,.3); opacity:.94;}
+  .counter .bar{display:flex; align-items:center; gap:4px; padding:6px 6px 0;}
+  .counter .grip{color:#B9C4CE; font-size:12px; letter-spacing:-1px; cursor:grab; padding:0 2px;}
+  .counter .dot{width:8px; height:8px; border-radius:50%; flex:none;}
+  .counter .bar input{
+    border:none; background:transparent; font-size:11.5px; color:var(--ink-soft);
+    width:100%; min-width:0; font-family:inherit; padding:3px 2px; border-radius:4px;
+  }
+  .counter .bar input:focus{outline:1px solid var(--denim); background:#fff;}
+  .counter .bar .x{
+    border:none; background:none; color:var(--ink-soft); cursor:pointer;
+    font-size:15px; width:26px; height:26px; flex:none; border-radius:6px;
+    touch-action:manipulation;
+  }
+  .counter .tap{
+    width:100%; border:none; background:none; cursor:pointer; font-family:inherit;
+    padding:2px 0 8px; line-height:1; touch-action:none;
+  }
+  .counter .tap:active{background:rgba(59,91,146,.1);}
+  .counter .num{font-family:var(--mono); font-size:36px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .counter .mini{display:flex; border-top:1px solid var(--line);}
+  .counter .mini button{
+    flex:1; border:none; background:none; height:36px; cursor:pointer;
+    font-size:12px; color:var(--ink-soft); font-family:inherit; touch-action:manipulation;
+  }
+  .counter .mini button + button{border-left:1px solid var(--line);}
+  .counter .mini button:active{background:#EEF2F7;}
+
+  body.collapsed .counter{width:64px; height:64px; border-radius:50%;}
+  body.collapsed .counter .bar, body.collapsed .counter .mini{display:none;}
+  body.collapsed .counter .tap{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; padding:0;
+  }
+  body.collapsed .counter .num{font-size:21px;}
+  body.collapsed .counter .tap::after{
+    content:attr(data-name); font-size:9px; color:var(--ink-soft);
+    max-width:54px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  #empty{
+    position:fixed; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:14px; text-align:center;
+    color:var(--ink-soft); padding:24px; z-index:2;
+  }
+  #empty .swatch{
+    font-family:var(--mono); font-size:13px; line-height:1.9; letter-spacing:.35em;
+    color:var(--denim); background:#fff; border:1px solid var(--line);
+    border-radius:12px; padding:14px 18px;
+  }
+  #empty h2{font-size:16px; color:var(--ink); font-weight:600;}
+  #empty p{font-size:13px; max-width:360px; line-height:1.7;}
+  #empty .row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
+
+  #toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:rgba(34,48,62,.92); color:#fff; font-size:12.5px;
+    padding:9px 16px; border-radius:20px; z-index:60; opacity:0;
+    transition:opacity .25s; pointer-events:none; white-space:nowrap;
+  }
+  #toast.show{opacity:1;}
+
+  /* ── 反馈 / 打赏弹窗 ── */
+  #modal{position:fixed; inset:0; background:rgba(34,48,62,.45); z-index:70;
+    display:flex; align-items:center; justify-content:center; padding:20px;}
+  #modal[hidden]{display:none;}
+  #modal .sheet{background:#fff; border-radius:18px; padding:24px; max-width:320px; width:100%;
+    text-align:center; position:relative; box-shadow:0 10px 40px rgba(0,0,0,.25);}
+  #modal .mclose{position:absolute; top:6px; right:6px; width:40px; height:40px; border:none;
+    background:none; font-size:20px; color:var(--ink-soft); cursor:pointer; touch-action:manipulation;}
+  #modal h3{font-size:16px; margin-bottom:14px; color:var(--ink);}
+  #modal img{width:210px; height:210px; object-fit:contain; border:1px solid var(--line); border-radius:12px;}
+  #modal p{font-size:12.5px; color:var(--ink-soft); line-height:1.8; margin-top:12px;}
+  #modal .setup{display:none; background:#FFF8E6; border:1px dashed #B07A2E; color:#8A6420;
+    border-radius:10px; padding:10px 12px; text-align:left;}
+
+  /* 文字说明始终显示；窄屏只缩小尺寸，不隐藏 */
+  @media (max-width:900px){ .btn{font-size:12px; padding:0 8px; height:36px;} #topbar{gap:4px;} }
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important;} }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <button class="btn primary" id="openBtn">📄 <span class="t">打开 PDF</span></button>
+  <input type="file" id="fileInput" accept="application/pdf" hidden>
+  <span class="sep"></span>
+  <button class="btn" id="prev">‹</button>
+  <span id="pageInfo">– / –</span>
+  <button class="btn" id="next">›</button>
+  <span class="sep"></span>
+  <button class="btn" id="zOut">−</button>
+  <button class="btn" id="zFit">⤢<span class="t"> 适应宽度</span></button>
+  <button class="btn" id="zIn">＋</button>
+  <span class="sep"></span>
+  <button class="btn" id="rH">─<span class="t"> 横标尺</span></button>
+  <button class="btn" id="rV">│<span class="t"> 纵标尺</span></button>
+  <span class="sep"></span>
+  <button class="btn" id="hlY"><span class="hl-dot" style="background:var(--hl-y)"></span><span class="t">高亮贴</span></button>
+  <span class="sep"></span>
+  <button class="btn" id="addC">＋<span class="t"> 计数器</span></button>
+  <button class="btn" id="collapseC">◑<span class="t"> 折叠</span></button>
+  <span class="sep"></span>
+  <button class="btn" id="awake">☕<span class="t"> 常亮</span></button>
+  <span style="flex:1"></span>
+  <button class="btn" id="fbBtn">💬<span class="t"> 反馈</span></button>
+  <button class="btn" id="tipBtn">🧡<span class="t"> 打赏</span></button>
+  <button class="btn" id="focusBtn">⛶<span class="t"> 专注</span></button>
+</div>
+<button id="peek" title="显示工具条" aria-label="显示工具条">⚙</button>
+
+<div id="viewer">
+  <div id="stage" style="display:none">
+    <canvas id="pdfCanvas"></canvas>
+    <div id="hlLayer"></div>
+    <div class="ruler h gone" id="rulerH" tabindex="0" aria-label="横向标尺">
+      <span class="tab"><button class="fine" data-d="-1" aria-label="上移">▲</button><span class="lbl">行</span><button class="fine" data-d="1" aria-label="下移">▼</button></span>
+    </div>
+    <div class="ruler v gone" id="rulerV" tabindex="0" aria-label="纵向标尺">
+      <span class="tab"><button class="fine" data-d="-1" aria-label="左移">◀</button><span class="lbl">针</span><button class="fine" data-d="1" aria-label="右移">▶</button></span>
+    </div>
+  </div>
+</div>
+
+<div id="empty">
+  <div class="swatch">O / O \ O<br>| | O / \<br>\ O | | O</div>
+  <h2>全屏看图解，标记跟着你走</h2>
+  <p>打开图解 PDF 自动铺满屏幕。细标尺对准当前行，高亮贴贴住你的尺码，漂浮计数器随手一点 +1。</p>
+  <div class="row">
+    <button class="btn primary" id="openBtn2">📄 打开图解 PDF</button>
+    <button class="btn" id="demoBtn">先用示例图解试试</button>
+  </div>
+</div>
+
+<div id="floaters"></div>
+<div id="toast"></div>
+
+<div id="modal" hidden>
+  <div class="sheet">
+    <button class="mclose" aria-label="关闭">×</button>
+    <h3 id="mTitle"></h3>
+    <img id="mImg" alt="二维码">
+    <p id="mText"></p>
+    <p id="mSetup" class="setup"></p>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const $ = id => document.getElementById(id);
+const canvas = $("pdfCanvas"), ctx = canvas.getContext("2d");
+const stage = $("stage"), viewer = $("viewer"), hlLayer = $("hlLayer");
+const clamp = (v,a,b) => Math.min(Math.max(v,a),b);
+
+const state = {
+  pdf:null, pageNum:1, pageCount:0, scale:1, demo:false,
+  rulerH:{on:false, r:.3}, rulerV:{on:false, r:.5},
+  pageHl:{}, drawColor:null, selHl:null, counters:[]
+};
+const YARN = ["--yarn-1","--yarn-2","--yarn-3","--yarn-4","--yarn-5"];
+const HL = {y:["var(--hl-y)","var(--hl-y-b)"], p:["var(--hl-p)","var(--hl-p-b)"], g:["var(--hl-g)","var(--hl-g-b)"]};
+let renderedScale = 1, baseW = 0, baseH = 0;
+
+function toast(msg){
+  const t=$("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),1800);
+}
+
+/* ── PDF ── */
+$("openBtn").onclick = $("openBtn2").onclick = () => $("fileInput").click();
+$("fileInput").onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    state.pdf = await pdfjsLib.getDocument({data: await f.arrayBuffer()}).promise;
+    state.demo=false; state.pageNum=1; state.pageCount=state.pdf.numPages; state.pageHl={};
+    $("empty").style.display="none"; stage.style.display="block";
+    await fitWidth();
+  }catch(err){ alert("PDF 无法打开，请换一个文件。"); }
+};
+
+async function fitWidth(){
+  if(state.demo){ state.scale=Math.max(.8,(viewer.clientWidth-16)/760); render(); return; }
+  if(!state.pdf) return;
+  const page = await state.pdf.getPage(state.pageNum);
+  state.scale = (viewer.clientWidth-16) / page.getViewport({scale:1}).width;
+  render();
+}
+
+async function render(){
+  if(state.demo){ renderDemo(); afterRender(); return; }
+  if(!state.pdf) return;
+  const page = await state.pdf.getPage(state.pageNum);
+  const vp = page.getViewport({scale: state.scale});
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = vp.width*dpr; canvas.height = vp.height*dpr;
+  canvas.style.width = vp.width+"px"; canvas.style.height = vp.height+"px";
+  await page.render({canvasContext:ctx, viewport:vp, transform:[dpr,0,0,dpr,0,0]}).promise;
+  $("pageInfo").textContent = `${state.pageNum} / ${state.pageCount}`;
+  baseW=vp.width; baseH=vp.height; renderedScale=state.scale;
+  afterRender();
+}
+function afterRender(){ placeRulers(); renderHls(); }
+
+$("prev").onclick = () => { if(state.pageNum>1){ state.pageNum--; state.selHl=null; render(); } };
+$("next").onclick = () => { if(state.pageNum<state.pageCount){ state.pageNum++; state.selHl=null; render(); } };
+$("zIn").onclick  = () => { state.scale=clamp(state.scale*1.15,.3,5); render(); };
+$("zOut").onclick = () => { state.scale=clamp(state.scale/1.15,.3,5); render(); };
+$("zFit").onclick = fitWidth;
+
+/* ── 双指缩放（自己实现，避免 iPad 把工具条一起放大）── */
+const pts = new Map();
+let pinch = null;
+const dist=(a,b)=>Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+viewer.addEventListener("pointerdown", e=>{
+  if(e.pointerType!=="touch" || stage.style.display==="none") return;
+  pts.set(e.pointerId, e);
+  if(pts.size===2){ const [a,b]=[...pts.values()]; pinch={d:dist(a,b), s:state.scale}; }
+});
+viewer.addEventListener("pointermove", e=>{
+  if(!pts.has(e.pointerId)) return;
+  pts.set(e.pointerId, e);
+  if(pts.size===2 && pinch){
+    const [a,b]=[...pts.values()];
+    state.scale = clamp(pinch.s * (dist(a,b)/pinch.d), .3, 5);
+    const k = state.scale/renderedScale;                  // 先用 CSS 缩放做即时反馈
+    canvas.style.width=(baseW*k)+"px"; canvas.style.height=(baseH*k)+"px";
+    afterRender();
+  }
+});
+function ptEnd(e){
+  if(!pts.has(e.pointerId)) return;
+  pts.delete(e.pointerId);
+  if(pts.size<2 && pinch){ pinch=null; render(); }        // 松手后重新渲染成清晰的
+}
+viewer.addEventListener("pointerup", ptEnd);
+viewer.addEventListener("pointercancel", ptEnd);
+
+/* ── 示例图解 ── */
+$("demoBtn").onclick = () => {
+  state.demo=true; state.pdf=null; state.pageCount=1; state.pageNum=1;
+  $("pageInfo").textContent="示例";
+  $("empty").style.display="none"; stage.style.display="block";
+  fitWidth();
+};
+function renderDemo(){
+  const cols=24, rows=30, cell=26*state.scale, m=48*state.scale;
+  const w=cols*cell+m*2, h=rows*cell+m*2+40*state.scale;
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=w*dpr; canvas.height=h*dpr;
+  canvas.style.width=w+"px"; canvas.style.height=h+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,w,h);
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillStyle="#22303E"; ctx.font=`${14*state.scale}px sans-serif`;
+  ctx.fillText("示例：菱形蕾丝披肩 · 尺码 S（M，L，XL）", w/2, m/2);
+  ctx.font=`${11*state.scale}px sans-serif`; ctx.fillStyle="#5C6B7A";
+  ctx.fillText("起针 96（108，120，132）针 · 密度 22 针 × 30 行 / 10cm", w/2, m/2+18*state.scale);
+  const top=m+20*state.scale;
+  ctx.strokeStyle="#B9C4CE"; ctx.lineWidth=1;
+  for(let r=0;r<=rows;r++){ctx.beginPath();ctx.moveTo(m,top+r*cell);ctx.lineTo(m+cols*cell,top+r*cell);ctx.stroke();}
+  for(let c=0;c<=cols;c++){ctx.beginPath();ctx.moveTo(m+c*cell,top);ctx.lineTo(m+c*cell,top+rows*cell);ctx.stroke();}
+  for(let r=0;r<rows;r++){
+    ctx.font=`${14*state.scale}px monospace`;
+    for(let c=0;c<cols;c++){
+      const x=m+c*cell+cell/2, y=top+r*cell+cell/2;
+      const d=Math.abs((c%12)-5)+(r%14<7?r%14:13-(r%14));
+      let s=""; if(d===6)s="O"; else if(d===5)s=(c%12<5)?"/":"\\"; else if(r%14===6&&c%12===5)s="▲";
+      if(s){ctx.fillStyle="#3B5B92";ctx.fillText(s,x,y);}
+    }
+    const no=rows-r; ctx.fillStyle="#5C6B7A"; ctx.font=`${11*state.scale}px monospace`;
+    if(no%2===1)ctx.fillText(no,m+cols*cell+16*state.scale,top+r*cell+cell/2);
+    else ctx.fillText(no,m-16*state.scale,top+r*cell+cell/2);
+  }
+  baseW=w; baseH=h; renderedScale=state.scale;
+}
+
+/* ── 标尺 ── */
+function placeRulers(){
+  const h=canvas.clientHeight, w=canvas.clientWidth;
+  $("rulerH").style.top=(state.rulerH.r*h-1)+"px";
+  $("rulerV").style.left=(state.rulerV.r*w-1)+"px";
+  $("rulerH").classList.toggle("gone", !state.rulerH.on);
+  $("rulerV").classList.toggle("gone", !state.rulerV.on);
+  $("rH").classList.toggle("on", state.rulerH.on);
+  $("rV").classList.toggle("on", state.rulerV.on);
+}
+function needDoc(){ if(stage.style.display==="none"){toast("请先打开图解或示例");return true;} return false; }
+$("rH").onclick=()=>{ if(needDoc())return; state.rulerH.on=!state.rulerH.on; placeRulers(); };
+$("rV").onclick=()=>{ if(needDoc())return; state.rulerV.on=!state.rulerV.on; placeRulers(); };
+
+function dragRuler(el, axis, obj){
+  el.addEventListener("pointerdown", e=>{
+    if(e.target.classList.contains("fine")) return;
+    e.stopPropagation();                       // 别让 viewer 误认成缩放手势
+    const move=ev=>{
+      const r=canvas.getBoundingClientRect();
+      obj.r = clamp(axis==="y" ? (ev.clientY-r.top)/r.height : (ev.clientX-r.left)/r.width, 0, 1);
+      placeRulers();
+    };
+    const up=()=>{ window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up); };
+    window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
+  });
+  el.querySelectorAll(".fine").forEach(b=>{
+    b.addEventListener("pointerdown", e=>e.stopPropagation());
+    b.addEventListener("click", e=>{
+      obj.r=clamp(obj.r + (+b.dataset.d)*0.003, 0, 1); placeRulers(); e.stopPropagation();
+    });
+  });
+  el.addEventListener("keydown", e=>{
+    const map = axis==="y" ? {ArrowUp:-1,ArrowDown:1} : {ArrowLeft:-1,ArrowRight:1};
+    if(!(e.key in map)) return;
+    obj.r=clamp(obj.r+map[e.key]*0.003,0,1); placeRulers(); e.preventDefault();
+  });
+}
+dragRuler($("rulerH"),"y",state.rulerH);
+dragRuler($("rulerV"),"x",state.rulerV);
+
+/* ── 高亮便签贴 ── */
+$("hlY").onclick=()=>{
+  if(needDoc())return;
+  state.drawColor = state.drawColor ? null : "y";
+  $("hlY").classList.toggle("on", !!state.drawColor);
+  hlLayer.classList.toggle("drawing", !!state.drawColor);
+  if(state.drawColor) toast("在图上框出要标记的区域");
+};
+function curHls(){
+  const key = state.demo ? "demo" : state.pageNum;
+  if(!state.pageHl[key]) state.pageHl[key]=[];
+  return state.pageHl[key];
+}
+hlLayer.addEventListener("pointerdown", e=>{
+  if(!state.drawColor){ state.selHl=null; renderHls(); return; }
+  e.stopPropagation();
+  const rect=canvas.getBoundingClientRect();
+  const sx=(e.clientX-rect.left)/rect.width, sy=(e.clientY-rect.top)/rect.height;
+  const hl={x:sx,y:sy,w:0,h:0,color:state.drawColor};
+  curHls().push(hl);
+  const move=ev=>{
+    hl.w=Math.max(0,(ev.clientX-rect.left)/rect.width-sx);
+    hl.h=Math.max(0,(ev.clientY-rect.top)/rect.height-sy);
+    renderHls();
+  };
+  const up=()=>{
+    window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
+    if(hl.w<0.005||hl.h<0.004) curHls().pop(); else state.selHl=hl;
+    state.drawColor=null; $("hlY").classList.remove("on");
+    hlLayer.classList.remove("drawing");
+    renderHls();
+  };
+  window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
+});
+function renderHls(){
+  hlLayer.innerHTML="";
+  const W=canvas.clientWidth, H=canvas.clientHeight;
+  curHls().forEach((hl,i)=>{
+    const d=document.createElement("div");
+    d.className="hl"+(state.selHl===hl?" sel":"");
+    d.style.cssText=`left:${hl.x*W}px;top:${hl.y*H}px;width:${hl.w*W}px;height:${hl.h*H}px;
+      background:${HL[hl.color][0]};border:1px solid ${HL[hl.color][1]}`;
+    d.innerHTML=`<span class="x" title="删除">×</span><span class="rs">⤡</span>`;
+    d.querySelector(".x").onclick=ev=>{ev.stopPropagation(); curHls().splice(i,1); state.selHl=null; renderHls();};
+    let moved=false;
+    d.addEventListener("pointerdown", e=>{
+      if(e.target.classList.contains("x")||e.target.classList.contains("rs")) return;
+      e.stopPropagation();
+      const ox=e.clientX, oy=e.clientY, bx=hl.x, by=hl.y; moved=false;
+      const move=ev=>{
+        if(!moved && Math.hypot(ev.clientX-ox, ev.clientY-oy)<6) return;
+        moved=true;
+        hl.x=bx+(ev.clientX-ox)/W; hl.y=by+(ev.clientY-oy)/H; renderHls();
+      };
+      const up=()=>{
+        window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
+        if(!moved){ state.selHl = state.selHl===hl ? null : hl; renderHls(); }   // 轻点＝选中
+      };
+      window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
+    });
+    d.querySelector(".rs").addEventListener("pointerdown", e=>{
+      e.stopPropagation();
+      const ox=e.clientX, oy=e.clientY, bw=hl.w, bh=hl.h;
+      const move=ev=>{
+        hl.w=Math.max(.005,bw+(ev.clientX-ox)/W); hl.h=Math.max(.004,bh+(ev.clientY-oy)/H); renderHls();
+      };
+      const up=()=>{ window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up); };
+      window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
+    });
+    hlLayer.appendChild(d);
+  });
+}
+
+/* ── 漂浮计数器：整卡可拖，8px 阈值区分「拖动」与「点击 +1」── */
+function addCounter(name){
+  const i=state.counters.length;
+  state.counters.push({
+    id:Date.now()+Math.random(), name:name||`计数器${i+1}`, value:0,
+    color:YARN[i%YARN.length],
+    x: window.innerWidth-172, y: 66+i*136
+  });
+  renderCounters();
+}
+function renderCounters(){
+  const box=$("floaters"); box.innerHTML="";
+  state.counters.forEach(c=>{
+    const el=document.createElement("div");
+    el.className="counter";
+    el.innerHTML=`
+      <div class="bar">
+        <span class="grip">⠿</span>
+        <span class="dot" style="background:var(${c.color})"></span>
+        <input value="" aria-label="计数器名称">
+        <button class="x" title="删除">×</button>
+      </div>
+      <button class="tap" data-name="${c.name}" aria-label="加一">
+        <span class="num" style="color:var(${c.color})">${c.value}</span>
+      </button>
+      <div class="mini"><button class="m">−1</button><button class="z">归零</button></div>`;
+    box.appendChild(el);
+    const numEl=el.querySelector(".num"), tapEl=el.querySelector(".tap");
+    const place=()=>{
+      c.x=clamp(c.x, 0, window.innerWidth - el.offsetWidth);
+      c.y=clamp(c.y, 0, window.innerHeight - el.offsetHeight);
+      el.style.left=c.x+"px"; el.style.top=c.y+"px";
+    };
+    place();
+
+    const inp=el.querySelector("input"); inp.value=c.name;
+    inp.onchange=e=>{ c.name=e.target.value; tapEl.dataset.name=c.name; };
+    el.querySelector(".m").onclick=()=>{ c.value=Math.max(0,c.value-1); numEl.textContent=c.value; };
+    el.querySelector(".z").onclick=()=>{ c.value=0; numEl.textContent=c.value; };
+    el.querySelector(".x").onclick=()=>{ state.counters=state.counters.filter(x=>x.id!==c.id); renderCounters(); };
+
+    let moved=false;
+    tapEl.onclick=()=>{ if(moved){ moved=false; return; } c.value++; numEl.textContent=c.value; };
+
+    /* 卡片任意位置按下都能拖（输入框和小按钮除外）*/
+    el.addEventListener("pointerdown", e=>{
+      if(e.target.closest("input, .x, .m, .z")) return;
+      e.stopPropagation();
+      const sx=e.clientX, sy=e.clientY, bx=c.x, by=c.y; moved=false;
+      const move=ev=>{
+        const dx=ev.clientX-sx, dy=ev.clientY-sy;
+        if(!moved && Math.hypot(dx,dy) < 8) return;    // 8px 阈值：小于它算点击
+        if(!moved) el.classList.add("dragging");
+        moved=true;
+        c.x=bx+dx; c.y=by+dy; place();
+      };
+      const up=()=>{
+        window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
+        el.classList.remove("dragging");
+      };
+      window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
+    });
+  });
+}
+$("addC").onclick=()=>addCounter();
+$("collapseC").onclick=()=>{
+  document.body.classList.toggle("collapsed");
+  $("collapseC").classList.toggle("on", document.body.classList.contains("collapsed"));
+  renderCounters();
+};
+
+/* ── 屏幕常亮（iPadOS 16.4+ 支持）── */
+let wakeLock=null, wantAwake=false;
+async function setAwake(on){
+  wantAwake=on;
+  try{
+    if(on){
+      if(!("wakeLock" in navigator)){ toast("此浏览器不支持屏幕常亮"); wantAwake=false; return; }
+      wakeLock = await navigator.wakeLock.request("screen");
+      toast("屏幕常亮已开启");
+    } else if(wakeLock){ await wakeLock.release(); wakeLock=null; toast("屏幕常亮已关闭"); }
+  }catch(err){ toast("无法开启常亮：" + err.name); wantAwake=false; }
+  $("awake").classList.toggle("on", wantAwake);
+}
+$("awake").onclick=()=>setAwake(!wantAwake);
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState==="visible" && wantAwake && !wakeLock) setAwake(true);
+});
+
+/* ── 反馈 / 打赏 ── */
+const MODALS = {
+  fb:{ img:"feedback-qr.png",
+       title:"碰到问题？直接找我 💬",
+       text:"扫码加我微信（备注「图解伴侣」），我拉你进编织群——bug、建议、想要的新功能，群里说都行。",
+       setup:"站长设置：把你的微信二维码截图命名为 feedback-qr.png，和本网页文件放在同一个文件夹（GitHub 仓库根目录），刷新即可显示。" },
+  tip:{ img:"tip-qr.png",
+       title:"请我喝杯奶茶 🧋",
+       text:"这个小工具免费使用。如果它陪你织完了一件作品，欢迎随意打赏，支持我继续改进～",
+       setup:"站长设置：微信里「我 → 服务 → 钱包 → 收付款 → 赞赏码」保存图片，命名为 tip-qr.png 放在同一文件夹即可。" }
+};
+function openModal(k){
+  const m=MODALS[k];
+  $("mTitle").textContent=m.title;
+  $("mText").textContent=m.text;
+  const img=$("mImg");
+  $("mSetup").style.display="none"; img.style.display="inline-block";
+  img.onerror=()=>{ img.style.display="none"; $("mSetup").textContent=m.setup; $("mSetup").style.display="block"; };
+  img.src=m.img;
+  $("modal").hidden=false;
+}
+$("fbBtn").onclick=()=>openModal("fb");
+$("tipBtn").onclick=()=>openModal("tip");
+$("modal").addEventListener("click", e=>{
+  if(e.target.id==="modal" || e.target.classList.contains("mclose")) $("modal").hidden=true;
+});
+
+/* ── 专注模式 ── */
+$("focusBtn").onclick=()=>{ $("topbar").classList.add("hidden"); document.body.classList.add("focus"); };
+$("peek").onclick=()=>{ $("topbar").classList.remove("hidden"); document.body.classList.remove("focus"); };
+
+/* 旋转 / 改变窗口：把计数器拉回屏幕内 */
+window.addEventListener("resize", ()=>{ renderCounters(); if(stage.style.display!=="none") afterRender(); });
+
+addCounter("行数"); addCounter("花样重复");
+</script>
+</body>
+</html>
