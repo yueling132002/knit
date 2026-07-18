@@ -253,6 +253,8 @@
   <button class="btn" id="collapseC">◑<span class="t"> 折叠</span></button>
   <span class="sep"></span>
   <button class="btn" id="awake">☕<span class="t"> 常亮</span></button>
+  <span class="sep"></span>
+  <button class="btn" id="clearSaved" title="清空所有保存的标尺、高亮、计数">🧹<span class="t"> 清除记录</span></button>
   <span style="flex:1"></span>
   <button class="btn" id="fbBtn">💬<span class="t"> 反馈</span></button>
   <button class="btn" id="tipBtn">🧡<span class="t"> 打赏</span></button>
@@ -324,6 +326,53 @@ function toast(msg){
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),1800);
 }
 
+/* ── localStorage 进度保存（PDF 文件本身无法持久化，只保存标记/计数/位置） ── */
+const STORAGE_KEY = "zhiji-v1";
+let saveTimer = null;
+function persistNow(){
+  try{
+    const data = {
+      rulerH: state.rulerH,
+      rulerV: state.rulerV,
+      pageNum: state.pageNum,
+      scale: state.scale,
+      pageHl: state.pageHl,
+      counters: state.counters,
+      collapsed: document.body.classList.contains("collapsed"),
+      demo: state.demo
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }catch(err){ /* 容量满或被禁用，静默即可，不打扰用户 */ }
+}
+function queueSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(persistNow, 300);
+}
+function restoreFromStorage(){
+  let raw; try{ raw = localStorage.getItem(STORAGE_KEY); }catch(_){ return; }
+  if(!raw) return;
+  try{
+    const d = JSON.parse(raw);
+    if(d.rulerH) state.rulerH = d.rulerH;
+    if(d.rulerV) state.rulerV = d.rulerV;
+    if(typeof d.pageNum === "number") state.pageNum = d.pageNum;
+    if(typeof d.scale === "number") state.scale = d.scale;
+    if(d.pageHl && typeof d.pageHl === "object") state.pageHl = d.pageHl;
+    if(Array.isArray(d.counters)) state.counters = d.counters;
+    if(d.collapsed){ document.body.classList.add("collapsed"); $("collapseC")?.classList.add("on"); }
+    if(d.demo) state.demo = true;
+  }catch(_){ /* JSON 解析失败，忽略坏数据 */ }
+}
+function clearAllStorage(){
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
+  state.rulerH = {on:false, r:.3}; state.rulerV = {on:false, r:.5};
+  state.pageHl = {}; state.counters = [];
+  document.body.classList.remove("collapsed");
+  $("collapseC")?.classList.remove("on");
+  placeRulers(); renderHls(); renderCounters();
+  toast("已清除所有本地记录");
+}
+
 /* ── PDF ── */
 $("openBtn").onclick = $("openBtn2").onclick = () => $("fileInput").click();
 $("fileInput").onchange = async e => {
@@ -336,9 +385,15 @@ $("fileInput").onchange = async e => {
   $("empty").style.display="none";
   try{
     state.pdf = await pdfjsLib.getDocument({data: await f.arrayBuffer()}).promise;
-    state.demo=false; state.pageNum=1; state.pageCount=state.pdf.numPages; state.pageHl={};
+    state.demo=false;
+    /* 恢复上次进度：使用上一次记录的页码（超过总页数则截断），高亮贴也保留 */
+    const lastPage = (typeof state.pageNum === "number" && state.pageNum >= 1 && state.pageNum <= state.pdf.numPages)
+                     ? state.pageNum : 1;
+    state.pageNum = lastPage;
+    state.pageCount = state.pdf.numPages;
     stage.style.display="block";
     await fitWidth();
+    toast(lastPage > 1 ? `已恢复到第 ${lastPage} 页` : "PDF 已加载");
   }catch(err){ alert("PDF 无法打开，请换一个文件。"); $("empty").style.display=""; stage.style.display="none"; }
   finally{ $("loading").classList.remove("show"); }
 };
@@ -366,11 +421,11 @@ async function render(){
 }
 function afterRender(){ placeRulers(); renderHls(); }
 
-$("prev").onclick = () => { if(state.pageNum>1){ state.pageNum--; state.selHl=null; render(); } };
-$("next").onclick = () => { if(state.pageNum<state.pageCount){ state.pageNum++; state.selHl=null; render(); } };
-$("zIn").onclick  = () => { state.scale=clamp(state.scale*1.15,.3,5); render(); };
-$("zOut").onclick = () => { state.scale=clamp(state.scale/1.15,.3,5); render(); };
-$("zFit").onclick = fitWidth;
+$("prev").onclick = () => { if(state.pageNum>1){ state.pageNum--; state.selHl=null; render(); queueSave(); } };
+$("next").onclick = () => { if(state.pageNum<state.pageCount){ state.pageNum++; state.selHl=null; render(); queueSave(); } };
+$("zIn").onclick  = () => { state.scale=clamp(state.scale*1.15,.3,5); render(); queueSave(); };
+$("zOut").onclick = () => { state.scale=clamp(state.scale/1.15,.3,5); render(); queueSave(); };
+$("zFit").onclick = () => { fitWidth(); queueSave(); };
 
 /* ── 双指缩放（自己实现，避免 iPad 把工具条一起放大）── */
 const pts = new Map();
@@ -457,24 +512,28 @@ function dragRuler(el, axis, obj){
   el.addEventListener("pointerdown", e=>{
     if(e.target.classList.contains("fine")) return;
     e.stopPropagation();                       // 别让 viewer 误认成缩放手势
+    let moved=false;
     const move=ev=>{
       const r=canvas.getBoundingClientRect();
       obj.r = clamp(axis==="y" ? (ev.clientY-r.top)/r.height : (ev.clientX-r.left)/r.width, 0, 1);
-      placeRulers();
+      placeRulers(); moved=true;
     };
-    const up=()=>{ window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up); };
+    const up=()=>{
+      window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
+      if(moved) queueSave();
+    };
     window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
   });
   el.querySelectorAll(".fine").forEach(b=>{
     b.addEventListener("pointerdown", e=>e.stopPropagation());
     b.addEventListener("click", e=>{
-      obj.r=clamp(obj.r + (+b.dataset.d)*0.003, 0, 1); placeRulers(); e.stopPropagation();
+      obj.r=clamp(obj.r + (+b.dataset.d)*0.003, 0, 1); placeRulers(); queueSave(); e.stopPropagation();
     });
   });
   el.addEventListener("keydown", e=>{
     const map = axis==="y" ? {ArrowUp:-1,ArrowDown:1} : {ArrowLeft:-1,ArrowRight:1};
     if(!(e.key in map)) return;
-    obj.r=clamp(obj.r+map[e.key]*0.003,0,1); placeRulers(); e.preventDefault();
+    obj.r=clamp(obj.r+map[e.key]*0.003,0,1); placeRulers(); queueSave(); e.preventDefault();
   });
 }
 dragRuler($("rulerH"),"y",state.rulerH);
@@ -487,6 +546,7 @@ $("hlY").onclick=()=>{
   $("hlY").classList.toggle("on", !!state.drawColor);
   hlLayer.classList.toggle("drawing", !!state.drawColor);
   if(state.drawColor) toast("在图上框出要标记的区域");
+  queueSave();
 };
 function curHls(){
   const key = state.demo ? "demo" : state.pageNum;
@@ -511,6 +571,7 @@ hlLayer.addEventListener("pointerdown", e=>{
     state.drawColor=null; $("hlY").classList.remove("on");
     hlLayer.classList.remove("drawing");
     renderHls();
+    queueSave();
   };
   window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
 });
@@ -523,7 +584,7 @@ function renderHls(){
     d.style.cssText=`left:${hl.x*W}px;top:${hl.y*H}px;width:${hl.w*W}px;height:${hl.h*H}px;
       background:${HL[hl.color][0]};border:1px solid ${HL[hl.color][1]}`;
     d.innerHTML=`<span class="x" title="删除">×</span><span class="rs">⤡</span>`;
-    d.querySelector(".x").onclick=ev=>{ev.stopPropagation(); curHls().splice(i,1); state.selHl=null; renderHls();};
+    d.querySelector(".x").onclick=ev=>{ev.stopPropagation(); curHls().splice(i,1); state.selHl=null; renderHls(); queueSave();};
     let moved=false;
     d.addEventListener("pointerdown", e=>{
       if(e.target.classList.contains("x")||e.target.classList.contains("rs")) return;
@@ -536,17 +597,22 @@ function renderHls(){
       };
       const up=()=>{
         window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
+        if(moved) queueSave();
         if(!moved){ state.selHl = state.selHl===hl ? null : hl; renderHls(); }   // 轻点＝选中
       };
       window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
     });
     d.querySelector(".rs").addEventListener("pointerdown", e=>{
       e.stopPropagation();
-      const ox=e.clientX, oy=e.clientY, bw=hl.w, bh=hl.h;
+      const ox=e.clientX, oy=e.clientY, bw=hl.w, bh=hl.h; let resized=false;
       const move=ev=>{
         hl.w=Math.max(.005,bw+(ev.clientX-ox)/W); hl.h=Math.max(.004,bh+(ev.clientY-oy)/H); renderHls();
+        resized=true;
       };
-      const up=()=>{ window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up); };
+      const up=()=>{
+        window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
+        if(resized) queueSave();
+      };
       window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
     });
     hlLayer.appendChild(d);
@@ -589,13 +655,13 @@ function renderCounters(){
     place();
 
     const inp=el.querySelector("input"); inp.value=c.name;
-    inp.onchange=e=>{ c.name=e.target.value; tapEl.dataset.name=c.name; };
-    el.querySelector(".m").onclick=()=>{ c.value=Math.max(0,c.value-1); numEl.textContent=c.value; };
-    el.querySelector(".z").onclick=()=>{ c.value=0; numEl.textContent=c.value; };
-    el.querySelector(".x").onclick=()=>{ state.counters=state.counters.filter(x=>x.id!==c.id); renderCounters(); };
+    inp.onchange=e=>{ c.name=e.target.value; tapEl.dataset.name=c.name; queueSave(); };
+    el.querySelector(".m").onclick=()=>{ c.value=Math.max(0,c.value-1); numEl.textContent=c.value; queueSave(); };
+    el.querySelector(".z").onclick=()=>{ c.value=0; numEl.textContent=c.value; queueSave(); };
+    el.querySelector(".x").onclick=()=>{ state.counters=state.counters.filter(x=>x.id!==c.id); renderCounters(); queueSave(); };
 
     let moved=false;
-    tapEl.onclick=()=>{ if(moved){ moved=false; return; } c.value++; numEl.textContent=c.value; };
+    tapEl.onclick=()=>{ if(moved){ moved=false; return; } c.value++; numEl.textContent=c.value; queueSave(); };
 
     /* 卡片任意位置按下都能拖（输入框和小按钮除外）*/
     el.addEventListener("pointerdown", e=>{
@@ -612,16 +678,18 @@ function renderCounters(){
       const up=()=>{
         window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
         el.classList.remove("dragging");
+        if(moved) queueSave();
       };
       window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
     });
   });
 }
-$("addC").onclick=()=>addCounter();
+$("addC").onclick=()=>{ addCounter(); queueSave(); };
 $("collapseC").onclick=()=>{
   document.body.classList.toggle("collapsed");
   $("collapseC").classList.toggle("on", document.body.classList.contains("collapsed"));
   renderCounters();
+  queueSave();
 };
 
 /* ── 屏幕常亮（iPadOS 16.4+ 支持）── */
@@ -638,9 +706,17 @@ async function setAwake(on){
   $("awake").classList.toggle("on", wantAwake);
 }
 $("awake").onclick=()=>setAwake(!wantAwake);
+$("clearSaved").onclick=()=>{
+  if(confirm("要清除所有保存的标尺位置、高亮贴、计数和折叠状态吗？\n（不会删除 PDF 文件本身）")) clearAllStorage();
+};
 document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState==="visible" && wantAwake && !wakeLock) setAwake(true);
+  if(document.visibilityState==="hidden") persistNow();      // 切走前立刻同步一次，避免被回收
 });
+
+/* ── 启动：从 localStorage 恢复进度（PDF 文件本身需要重新打开） ── */
+restoreFromStorage();
+if(state.counters.length) renderCounters();
 
 /* ── 反馈 / 打赏 ── */
 const MODALS = {
