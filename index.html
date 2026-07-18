@@ -254,7 +254,7 @@
   <span class="sep"></span>
   <button class="btn" id="awake">☕<span class="t"> 常亮</span></button>
   <span class="sep"></span>
-  <button class="btn" id="clearSaved" title="清空所有保存的标尺、高亮、计数">🧹<span class="t"> 清除记录</span></button>
+  <button class="btn" id="clearSaved" title="清空缓存的图解 PDF 和所有保存的标尺、高亮、计数">🧹<span class="t"> 清除记录</span></button>
   <span style="flex:1"></span>
   <button class="btn" id="fbBtn">💬<span class="t"> 反馈</span></button>
   <button class="btn" id="tipBtn">🧡<span class="t"> 打赏</span></button>
@@ -278,7 +278,7 @@
 <div id="empty">
   <div class="swatch">O / O \ O<br>| | O / \<br>\ O | | O</div>
   <h2>全屏看图解，标记跟着你走</h2>
-  <p>打开图解 PDF 自动铺满屏幕。细标尺对准当前行，高亮贴贴住你的尺码，漂浮计数器随手一点 +1。</p>
+  <p>打开图解 PDF 自动铺满屏幕。细标尺对准当前行，高亮贴贴住你的尺码，漂浮计数器随手一点 +1。图解和进度都保存在本机浏览器里，下次打开自动恢复。</p>
   <div class="row">
     <button class="btn primary" id="openBtn2">📄 打开图解 PDF</button>
     <button class="btn" id="demoBtn">先用示例图解试试</button>
@@ -312,7 +312,7 @@ const stage = $("stage"), viewer = $("viewer"), hlLayer = $("hlLayer");
 const clamp = (v,a,b) => Math.min(Math.max(v,a),b);
 
 const state = {
-  pdf:null, pageNum:1, pageCount:0, scale:1, demo:false,
+  pdf:null, pageNum:1, pageCount:0, scale:1, demo:false, file:null,
   rulerH:{on:false, r:.3}, rulerV:{on:false, r:.5},
   pageHl:{}, drawColor:null, selHl:null, counters:[]
 };
@@ -325,8 +325,29 @@ function toast(msg){
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),1800);
 }
 
-/* ── localStorage 进度保存（PDF 文件本身无法持久化，只保存标记/计数/位置） ── */
+/* ── 本地保存：标记/计数/位置存 localStorage；PDF 文件太大，存 IndexedDB ── */
 const STORAGE_KEY = "zhiji-v1";
+const IDB_NAME = "zhiji-files", IDB_STORE = "files", IDB_KEY = "current";
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const q = indexedDB.open(IDB_NAME, 1);
+    q.onupgradeneeded = ()=>q.result.createObjectStore(IDB_STORE);
+    q.onsuccess = ()=>res(q.result);
+    q.onerror = ()=>rej(q.error);
+  });
+}
+function idbTx(mode, fn){
+  return idbOpen().then(db=>new Promise((res,rej)=>{
+    const tx = db.transaction(IDB_STORE, mode);
+    const q = fn(tx.objectStore(IDB_STORE));
+    tx.oncomplete = ()=>{ db.close(); res(q && q.result); };
+    tx.onerror = ()=>{ db.close(); rej(tx.error); };
+    tx.onabort = ()=>{ db.close(); rej(tx.error); };
+  }));
+}
+const idbPut = val => idbTx("readwrite", s=>s.put(val, IDB_KEY));
+const idbGet = ()  => idbTx("readonly",  s=>s.get(IDB_KEY));
+const idbDel = ()  => idbTx("readwrite", s=>s.delete(IDB_KEY));
 let saveTimer = null;
 function persistNow(){
   try{
@@ -335,6 +356,7 @@ function persistNow(){
       rulerV: state.rulerV,
       pageNum: state.pageNum,
       scale: state.scale,
+      file: state.file,
       pageHl: state.pageHl,
       counters: state.counters,
       collapsed: document.body.classList.contains("collapsed"),
@@ -348,27 +370,31 @@ function queueSave(){
   saveTimer = setTimeout(persistNow, 300);
 }
 function restoreFromStorage(){
-  let raw; try{ raw = localStorage.getItem(STORAGE_KEY); }catch(_){ return; }
-  if(!raw) return;
+  let raw; try{ raw = localStorage.getItem(STORAGE_KEY); }catch(_){ return false; }
+  if(!raw) return false;
   try{
     const d = JSON.parse(raw);
     if(d.rulerH) state.rulerH = d.rulerH;
     if(d.rulerV) state.rulerV = d.rulerV;
     if(typeof d.pageNum === "number") state.pageNum = d.pageNum;
     if(typeof d.scale === "number") state.scale = d.scale;
+    if(d.file && typeof d.file === "object") state.file = d.file;
     if(d.pageHl && typeof d.pageHl === "object") state.pageHl = d.pageHl;
     if(Array.isArray(d.counters)) state.counters = d.counters;
     if(d.collapsed){ document.body.classList.add("collapsed"); $("collapseC")?.classList.add("on"); }
     if(d.demo) state.demo = true;
-  }catch(_){ /* JSON 解析失败，忽略坏数据 */ }
+    return true;
+  }catch(_){ return false; /* JSON 解析失败，忽略坏数据 */ }
 }
 function clearAllStorage(){
   try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
+  idbDel().catch(()=>{});
   state.rulerH = {on:false, r:.3}; state.rulerV = {on:false, r:.5};
-  state.pageHl = {}; state.counters = [];
+  state.pageHl = {}; state.counters = []; state.file = null;
   document.body.classList.remove("collapsed");
   $("collapseC")?.classList.remove("on");
-  placeRulers(); renderHls(); renderCounters();
+  placeRulers(); renderHls();
+  addCounter("行数"); addCounter("花样重复");   /* 回到出厂状态：两个默认计数器 */
   toast("已清除所有本地记录");
 }
 
@@ -383,16 +409,23 @@ $("fileInput").onchange = async e => {
   $("loading").classList.add("show");
   $("empty").style.display="none";
   try{
-    state.pdf = await pdfjsLib.getDocument({data: await f.arrayBuffer()}).promise;
+    const buf = await f.arrayBuffer();
+    state.pdf = await pdfjsLib.getDocument({data: buf}).promise;
     state.demo=false;
-    /* 恢复上次进度：使用上一次记录的页码（超过总页数则截断），高亮贴也保留 */
-    const lastPage = (typeof state.pageNum === "number" && state.pageNum >= 1 && state.pageNum <= state.pdf.numPages)
+    /* 把文件本身缓存进 IndexedDB，刷新后自动恢复 */
+    let cached = true;
+    try{ await idbPut({name:f.name, size:f.size, blob:f}); }catch(_){ cached = false; }
+    /* 同一个文件恢复上次页码（超过总页数则截断），换了文件从第 1 页开始；高亮贴保留 */
+    const sameFile = state.file && state.file.name === f.name && state.file.size === f.size;
+    const lastPage = (sameFile && typeof state.pageNum === "number" && state.pageNum >= 1 && state.pageNum <= state.pdf.numPages)
                      ? state.pageNum : 1;
     state.pageNum = lastPage;
     state.pageCount = state.pdf.numPages;
+    state.file = {name:f.name, size:f.size};
     stage.style.display="block";
     await fitWidth();
-    toast(lastPage > 1 ? `已恢复到第 ${lastPage} 页` : "PDF 已加载");
+    queueSave();
+    toast(lastPage > 1 ? `已恢复到第 ${lastPage} 页` : cached ? "PDF 已加载，刷新后会自动恢复" : "PDF 已加载（此浏览器无法缓存文件，刷新后需重新打开）");
   }catch(err){ alert("PDF 无法打开，请换一个文件。"); $("empty").style.display=""; stage.style.display="none"; }
   finally{ $("loading").classList.remove("show"); }
 };
@@ -460,6 +493,7 @@ $("demoBtn").onclick = () => {
   $("pageInfo").textContent="示例";
   $("empty").style.display="none"; stage.style.display="block";
   fitWidth();
+  queueSave();
 };
 function renderDemo(){
   const cols=24, rows=30, cell=26*state.scale, m=48*state.scale;
@@ -706,16 +740,47 @@ async function setAwake(on){
 }
 $("awake").onclick=()=>setAwake(!wantAwake);
 $("clearSaved").onclick=()=>{
-  if(confirm("要清除所有保存的标尺位置、高亮贴、计数和折叠状态吗？\n（不会删除 PDF 文件本身）")) clearAllStorage();
+  if(confirm("要清除所有本地记录吗？\n包括：缓存的图解 PDF、标尺位置、高亮贴、计数器。\n（当前打开的画面不受影响，刷新后从头开始）")) clearAllStorage();
 };
 document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState==="visible" && wantAwake && !wakeLock) setAwake(true);
   if(document.visibilityState==="hidden") persistNow();      // 切走前立刻同步一次，避免被回收
 });
 
-/* ── 启动：从 localStorage 恢复进度（PDF 文件本身需要重新打开） ── */
-restoreFromStorage();
-if(state.counters.length) renderCounters();
+/* ── 启动：恢复标记进度；默认计数器只在首次访问（无存档）时创建，否则每次刷新都会重复添加 ── */
+const hadSave = restoreFromStorage();
+if(hadSave) renderCounters();
+else { addCounter("行数"); addCounter("花样重复"); }
+
+/* ── 启动：从 IndexedDB 恢复上次的 PDF；没有缓存但上次在看示例，则恢复示例 ── */
+(async ()=>{
+  try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(_){}
+  let rec = null;
+  try{ rec = await idbGet(); }catch(_){}
+  if(rec && rec.blob){
+    $("loadText").textContent = "正在恢复上次的图解…";
+    $("loadHint").textContent = rec.name || "";
+    $("loading").classList.add("show");
+    $("empty").style.display="none";
+    try{
+      state.pdf = await pdfjsLib.getDocument({data: await rec.blob.arrayBuffer()}).promise;
+      state.demo = false;
+      state.pageCount = state.pdf.numPages;
+      state.pageNum = clamp(typeof state.pageNum === "number" ? state.pageNum : 1, 1, state.pageCount);
+      state.file = {name:rec.name, size:rec.size};
+      stage.style.display="block";
+      await (hadSave ? render() : fitWidth());
+      toast(`已恢复上次的图解${rec.name ? "：" + rec.name : ""}`);
+    }catch(err){
+      $("empty").style.display=""; stage.style.display="none";
+      toast("缓存的图解恢复失败，请重新打开 PDF");
+    }finally{ $("loading").classList.remove("show"); }
+  } else if(state.demo){
+    state.pageCount = 1; $("pageInfo").textContent = "示例";
+    $("empty").style.display="none"; stage.style.display="block";
+    await render();
+  }
+})();
 
 /* ── 反馈 / 打赏 ── */
 const MODALS = {
@@ -750,8 +815,6 @@ $("peek").onclick=()=>{ $("topbar").classList.remove("hidden"); document.body.cl
 
 /* 旋转 / 改变窗口：把计数器拉回屏幕内 */
 window.addEventListener("resize", ()=>{ renderCounters(); if(stage.style.display!=="none") afterRender(); });
-
-addCounter("行数"); addCounter("花样重复");
 </script>
 </body>
 </html>
