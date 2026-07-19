@@ -254,11 +254,9 @@
     text-align:center; position:relative; box-shadow:0 10px 40px rgba(31,26,20,.20);}
   #modal .mclose{position:absolute; top:6px; right:6px; width:40px; height:40px; border:none;
     background:none; font-size:20px; color:var(--ink-2); cursor:pointer; touch-action:manipulation;}
-  #modal h3{font-size:18px; margin-bottom:16px; color:var(--ink); font-weight:300; font-family:var(--serif); letter-spacing:-0.01em;}
+  #modal h3{font-size:20px; margin-bottom:16px; color:var(--ink); font-weight:600; font-family:var(--serif); letter-spacing:-0.01em;}
   #modal img{width:200px; height:200px; object-fit:contain; border:1px solid var(--line); border-radius:2px;}
-  #modal p{font-size:13px; color:var(--ink-2); line-height:1.8; margin-top:14px; font-weight:300;}
-  #modal .setup{display:none; background:var(--warm-soft); border:1px dashed var(--warm); color:var(--warm);
-    border-radius:2px; padding:10px 12px; text-align:left; font-size:12px; line-height:1.7;}
+  #modal p{font-size:15px; color:var(--ink); line-height:1.8; margin-top:14px; font-weight:400;}
 
   /* ── 针号换算弹窗 ── */
   #calc{position:fixed; inset:0; background:rgba(31,26,20,.45); z-index:70;
@@ -422,7 +420,6 @@
     <h3 id="mTitle"></h3>
     <img id="mImg" alt="二维码">
     <p id="mText"></p>
-    <p id="mSetup" class="setup"></p>
   </div>
 </div>
 
@@ -1032,20 +1029,18 @@ else { addCounter("行数"); addCounter("花样重复"); }
 const MODALS = {
   fb:{ img:"feedback-qr.png",
        title:"碰到问题？直接找我 💬",
-       text:"添加我微信：majiayooo（备注「图解伴侣」）。bug、建议、想要的新功能，都可以直接跟我说～",
-       setup:"站长设置：把你的微信二维码截图命名为 feedback-qr.png，和本网页文件放在同一个文件夹（GitHub 仓库根目录），刷新即可显示。" },
+       text:"添加我微信：majiayooo（备注「图解伴侣」）。bug、建议、想要的新功能，都可以直接跟我说～" },
   tip:{ img:"tip-qr.png",
        title:"请我喝杯奶茶 🧋",
-       text:"这个小工具免费使用。如果它陪你织完了一件作品，欢迎随意打赏，支持我继续改进～",
-       setup:"站长设置：微信里「我 → 服务 → 钱包 → 收付款 → 赞赏码」保存图片，命名为 tip-qr.png 放在同一文件夹即可。" }
+       text:"这个小工具免费使用。如果它陪你织完了一件作品，欢迎随意打赏，支持我继续改进～" }
 };
 function openModal(k){
   const m=MODALS[k];
   $("mTitle").textContent=m.title;
   $("mText").textContent=m.text;
   const img=$("mImg");
-  $("mSetup").style.display="none"; img.style.display="inline-block";
-  img.onerror=()=>{ img.style.display="none"; $("mSetup").textContent=m.setup; $("mSetup").style.display="block"; };
+  img.style.display="inline-block";
+  img.onerror=()=>{ img.style.display="none"; };   /* 没上传二维码就只显示文字 */
   img.src=m.img;
   $("modal").hidden=false;
 }
