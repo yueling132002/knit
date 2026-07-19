@@ -25,8 +25,8 @@
     --accent-soft:#E8EBE0;
     --warm:#B8745A;
     --warm-soft:#F0E4D8;
-    --hl-butter:rgba(201,168,122,.18);
-    --hl-butter-b:rgba(201,168,122,.65);
+    --hl-butter:rgba(255,138,0,.30);      /* 高亮贴：亮橙（原奶油黄褐已弃用）*/
+    --hl-butter-b:rgba(255,120,0,.80);
     --hl-clay:rgba(184,116,90,.15);
     --hl-clay-b:rgba(184,116,90,.55);
     --hl-sage:rgba(107,122,94,.15);
@@ -104,33 +104,16 @@
   }
   body.focus #peek{display:flex;}
 
-  /* ── 标尺：线仍是 2px，热区放大到 44px ── */
-  .ruler{position:absolute; z-index:6; touch-action:none;}
-  .ruler.h{left:-8px; right:-8px; height:2px; background:var(--ink);}
-  .ruler.v{top:-8px; bottom:-8px; width:2px; background:var(--ink);}
-  .ruler::before{content:""; position:absolute; cursor:grab;}
-  .ruler.h::before{left:0; right:0; top:-21px; height:44px;}   /* 44px 触控热区 */
-  .ruler.v::before{top:0; bottom:0; left:-21px; width:44px;}
-  .ruler:active::before{cursor:grabbing;}
-  .ruler .tab{
-    position:absolute; background:var(--surface); border:1px solid var(--line);
-    border-radius:2px; font-size:11px; color:var(--ink-2);
-    user-select:none; white-space:nowrap; cursor:grab;
-    box-shadow:0 1px 4px rgba(31,26,20,.08);
-    display:flex; align-items:center; gap:0; overflow:hidden;
-  }
-  .ruler.h .tab{left:2px; top:-20px;}
-  .ruler.v .tab{top:2px; left:8px; flex-direction:column;}
-  .ruler .tab .lbl{padding:0 6px; font-size:11px; font-weight:400;}
-  .ruler.v .tab .lbl{padding:4px 6px;}
-  /* 微调按钮：40px 见方，手指点得中 */
-  .ruler .fine{
-    width:40px; height:38px; border:none; background:none; cursor:pointer;
-    color:var(--ink); font-size:13px; touch-action:manipulation;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .ruler.v .tab .fine{height:36px; width:38px;}
-  .ruler .fine:active{background:var(--surface-deep);}
+  /* ── 标尺：荧光笔色带，直接按住拖动；隐形触控热区补到 44px ── */
+  .ruler{position:absolute; z-index:6; touch-action:none; cursor:grab;}
+  .ruler:active{cursor:grabbing;}
+  .ruler.h{left:-8px; right:-8px; height:26px;
+    background:rgba(255,232,0,.42); border-top:1.5px solid rgba(240,205,0,.75); border-bottom:1.5px solid rgba(240,205,0,.75);}
+  .ruler.v{top:-8px; bottom:-8px; width:26px;
+    background:rgba(255,45,149,.32); border-left:1.5px solid rgba(235,20,130,.72); border-right:1.5px solid rgba(235,20,130,.72);}
+  .ruler::before{content:""; position:absolute;}   /* 透明热区，把可拖动范围补到 44px */
+  .ruler.h::before{left:0; right:0; top:calc(50% - 22px); height:44px;}
+  .ruler.v::before{top:0; bottom:0; left:calc(50% - 22px); width:44px;}
   .ruler.gone{display:none;}
 
   /* ── 高亮便签贴：改为「点选」而非 hover ── */
@@ -368,7 +351,7 @@
   <button class="btn" id="rH">─<span class="t"> 横标尺</span></button>
   <button class="btn" id="rV">│<span class="t"> 纵标尺</span></button>
   <span class="sep"></span>
-  <button class="btn" id="hlY"><span class="hl-dot" style="background:var(--warm)"></span><span class="t">高亮贴</span></button>
+  <button class="btn" id="hlY"><span class="hl-dot" style="background:#FF8A00"></span><span class="t">高亮贴</span></button>
   <span class="sep"></span>
   <button class="btn" id="addC">＋<span class="t"> 计数器</span></button>
   <button class="btn" id="collapseC">◑<span class="t"> 折叠</span></button>
@@ -388,12 +371,8 @@
   <div id="stage" style="display:none">
     <canvas id="pdfCanvas"></canvas>
     <div id="hlLayer"></div>
-    <div class="ruler h gone" id="rulerH" tabindex="0" aria-label="横向标尺">
-      <span class="tab"><span class="lbl">行</span><button class="fine" data-d="1" aria-label="下移">▼</button></span>
-    </div>
-    <div class="ruler v gone" id="rulerV" tabindex="0" aria-label="纵向标尺">
-      <span class="tab"><button class="fine" data-d="-1" aria-label="左移">◀</button><span class="lbl">针</span><button class="fine" data-d="1" aria-label="右移">▶</button></span>
-    </div>
+    <div class="ruler h gone" id="rulerH" tabindex="0" aria-label="横向标尺（荧光行标）"></div>
+    <div class="ruler v gone" id="rulerV" tabindex="0" aria-label="纵向标尺（荧光针标）"></div>
   </div>
 </div>
 
@@ -763,8 +742,8 @@ function renderDemo(){
 /* ── 标尺 ── */
 function placeRulers(){
   const h=canvas.clientHeight, w=canvas.clientWidth;
-  $("rulerH").style.top=(state.rulerH.r*h-1)+"px";
-  $("rulerV").style.left=(state.rulerV.r*w-1)+"px";
+  $("rulerH").style.top=(state.rulerH.r*h-13)+"px";    // -13 = 让 26px 色带中心对齐该行
+  $("rulerV").style.left=(state.rulerV.r*w-13)+"px";
   $("rulerH").classList.toggle("gone", !state.rulerH.on);
   $("rulerV").classList.toggle("gone", !state.rulerV.on);
   $("rH").classList.toggle("on", state.rulerH.on);
@@ -1039,8 +1018,9 @@ function openModal(k){
   $("mTitle").textContent=m.title;
   $("mText").textContent=m.text;
   const img=$("mImg");
-  img.style.display="inline-block";
-  img.onerror=()=>{ img.style.display="none"; };   /* 没上传二维码就只显示文字 */
+  img.style.display="none";                          /* 先藏起来，加载成功再显示，避免先闪一下空框 */
+  img.onload=()=>{ img.style.display="inline-block"; };
+  img.onerror=()=>{ img.style.display="none"; };     /* 没上传二维码就只显示文字 */
   img.src=m.img;
   $("modal").hidden=false;
 }
