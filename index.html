@@ -670,6 +670,36 @@ $("zIn").onclick  = () => { state.scale=clamp(state.scale*1.15,.3,5); render(); 
 $("zOut").onclick = () => { state.scale=clamp(state.scale/1.15,.3,5); render(); queueSave(); };
 $("zFit").onclick = () => { fitWidth(); queueSave(); };
 
+/* ── PDF 连续下滑：滑到底再下滑翻下一页；滑到顶再上滑回上一页（仅多页 PDF）── */
+let flipLock=false;
+const canFlip  = () => state.pdf && state.pageCount>1 && !flipLock;
+const atBottom = () => viewer.scrollTop + viewer.clientHeight >= viewer.scrollHeight - 2;
+const atTop    = () => viewer.scrollTop <= 2;
+function flipTo(next){
+  if(next ? state.pageNum>=state.pageCount : state.pageNum<=1) return;
+  flipLock=true;
+  state.pageNum += next ? 1 : -1; state.selHl=null;
+  Promise.resolve(render()).then(()=>{
+    viewer.scrollTop = next ? 0 : viewer.scrollHeight;   // 下一页停顶部、上一页停底部，衔接顺畅
+    setTimeout(()=>{ flipLock=false; }, 350);
+  });
+  queueSave();
+  toast(`第 ${state.pageNum} / ${state.pageCount} 页`);
+}
+viewer.addEventListener("wheel", e=>{                      // 桌面滚轮
+  if(!canFlip()) return;
+  if(e.deltaY>0 && atBottom()) flipTo(true);
+  else if(e.deltaY<0 && atTop()) flipTo(false);
+}, {passive:true});
+let touchY=null;                                          // 触屏：越过边界继续滑
+viewer.addEventListener("touchstart", e=>{ touchY = e.touches.length===1 ? e.touches[0].clientY : null; }, {passive:true});
+viewer.addEventListener("touchmove", e=>{
+  if(touchY===null || e.touches.length!==1 || !canFlip()) return;
+  const dy = e.touches[0].clientY - touchY;               // 手指上移 dy<0＝想往下看
+  if(dy<-60 && atBottom()){ flipTo(true); touchY=null; }
+  else if(dy>60 && atTop()){ flipTo(false); touchY=null; }
+}, {passive:true});
+
 /* ── 双指缩放（自己实现，避免 iPad 把工具条一起放大）── */
 const pts = new Map();
 let pinch = null;
