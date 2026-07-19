@@ -89,6 +89,7 @@
   .btn.primary:hover{background:#000;}
   .btn.on{background:var(--ink); border-color:var(--ink); color:var(--bg);}
   .btn.on:hover{background:#000;}
+  .btn[hidden]{display:none;}          /* .btn 的 display 会盖过 [hidden]，这里补回来 */
   .sep{width:1px; height:20px; background:var(--line); margin:0 2px;}
   #pageInfo{font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums; min-width:52px; text-align:center; font-weight:400;}
   .hl-dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
@@ -107,9 +108,9 @@
   /* ── 标尺：荧光笔色带，直接按住拖动；隐形触控热区补到 44px ── */
   .ruler{position:absolute; z-index:6; touch-action:none; cursor:grab;}
   .ruler:active{cursor:grabbing;}
-  .ruler.h{left:-8px; right:-8px; height:26px;
+  .ruler.h{left:-8px; right:-8px; height:21px;
     background:rgba(255,232,0,.42); border-top:1.5px solid rgba(240,205,0,.75); border-bottom:1.5px solid rgba(240,205,0,.75);}
-  .ruler.v{top:-8px; bottom:-8px; width:26px;
+  .ruler.v{top:-8px; bottom:-8px; width:21px;
     background:rgba(255,45,149,.32); border-left:1.5px solid rgba(235,20,130,.72); border-right:1.5px solid rgba(235,20,130,.72);}
   .ruler::before{content:""; position:absolute;}   /* 透明热区，把可拖动范围补到 44px */
   .ruler.h::before{left:0; right:0; top:calc(50% - 22px); height:44px;}
@@ -357,10 +358,8 @@
   <button class="btn" id="collapseC">◑<span class="t"> 折叠</span></button>
   <span class="sep"></span>
   <button class="btn" id="awake">☕<span class="t"> 常亮</span></button>
-  <span class="sep"></span>
-  <button class="btn" id="clearSaved" title="清空缓存的图解 PDF 和所有保存的标尺、高亮、计数">🧹<span class="t"> 清除记录</span></button>
   <span style="flex:1"></span>
-  <button class="btn" id="calcBtn" title="针号换算">🧮<span class="t"> 换算</span></button>
+  <button class="btn" id="calcBtn" title="针号&amp;密度换算">🧮<span class="t"> 针号&amp;密度换算</span></button>
   <button class="btn" id="fbBtn">💬<span class="t"> 反馈</span></button>
   <button class="btn" id="tipBtn" hidden>🧡<span class="t"> 打赏</span></button>
   <button class="btn" id="focusBtn">⛶<span class="t"> 专注</span></button>
@@ -742,8 +741,8 @@ function renderDemo(){
 /* ── 标尺 ── */
 function placeRulers(){
   const h=canvas.clientHeight, w=canvas.clientWidth;
-  $("rulerH").style.top=(state.rulerH.r*h-13)+"px";    // -13 = 让 26px 色带中心对齐该行
-  $("rulerV").style.left=(state.rulerV.r*w-13)+"px";
+  $("rulerH").style.top=(state.rulerH.r*h-10.5)+"px";    // -10.5 = 让 21px 色带中心对齐该行
+  $("rulerV").style.left=(state.rulerV.r*w-10.5)+"px";
   $("rulerH").classList.toggle("gone", !state.rulerH.on);
   $("rulerV").classList.toggle("gone", !state.rulerV.on);
   $("rH").classList.toggle("on", state.rulerH.on);
@@ -755,8 +754,9 @@ $("rV").onclick=()=>{ if(needDoc())return; state.rulerV.on=!state.rulerV.on; pla
 
 function dragRuler(el, axis, obj){
   el.addEventListener("pointerdown", e=>{
-    if(e.target.classList.contains("fine")) return;
     e.stopPropagation();                       // 别让 viewer 误认成缩放手势
+    e.preventDefault();
+    try{ el.setPointerCapture(e.pointerId); }catch(_){}   // 捕获指针，拖动全程事件不丢（修桌面拖不动）
     let moved=false;
     const move=ev=>{
       const r=canvas.getBoundingClientRect();
@@ -764,16 +764,14 @@ function dragRuler(el, axis, obj){
       placeRulers(); moved=true;
     };
     const up=()=>{
-      window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
+      el.removeEventListener("pointermove",move);
+      el.removeEventListener("pointerup",up);
+      el.removeEventListener("pointercancel",up);
       if(moved) queueSave();
     };
-    window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
-  });
-  el.querySelectorAll(".fine").forEach(b=>{
-    b.addEventListener("pointerdown", e=>e.stopPropagation());
-    b.addEventListener("click", e=>{
-      obj.r=clamp(obj.r + (+b.dataset.d)*0.003, 0, 1); placeRulers(); queueSave(); e.stopPropagation();
-    });
+    el.addEventListener("pointermove",move);
+    el.addEventListener("pointerup",up);
+    el.addEventListener("pointercancel",up);
   });
   el.addEventListener("keydown", e=>{
     const map = axis==="y" ? {ArrowUp:-1,ArrowDown:1} : {ArrowLeft:-1,ArrowRight:1};
@@ -832,7 +830,7 @@ function renderHls(){
     d.querySelector(".x").onclick=ev=>{ev.stopPropagation(); curHls().splice(i,1); state.selHl=null; renderHls(); queueSave();};
     let moved=false;
     d.addEventListener("pointerdown", e=>{
-      if(e.target.classList.contains("x")||e.target.classList.contains("rs")) return;
+      if(e.target.classList.contains("x")||e.target.classList.contains("rs")){ e.stopPropagation(); return; }  // 拦住穿透，否则删除按钮会被下层重绘销毁
       e.stopPropagation();
       const ox=e.clientX, oy=e.clientY, bx=hl.x, by=hl.y; moved=false;
       const move=ev=>{
@@ -951,9 +949,6 @@ async function setAwake(on){
   $("awake").classList.toggle("on", wantAwake);
 }
 $("awake").onclick=()=>setAwake(!wantAwake);
-$("clearSaved").onclick=()=>{
-  if(confirm("要清除所有本地记录吗？\n包括：缓存的图解 PDF、标尺位置、高亮贴、计数器。\n（当前打开的画面不受影响，刷新后从头开始）")) clearAllStorage();
-};
 document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState==="visible" && wantAwake && !wakeLock) setAwake(true);
   if(document.visibilityState==="hidden") persistNow();      // 切走前立刻同步一次，避免被回收
