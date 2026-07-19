@@ -226,6 +226,88 @@
   #modal .setup{display:none; background:#FFF8E6; border:1px dashed #B07A2E; color:#8A6420;
     border-radius:10px; padding:10px 12px; text-align:left;}
 
+  /* ── 针号换算弹窗 ── */
+  #calc{position:fixed; inset:0; background:rgba(34,48,62,.45); z-index:70;
+    display:flex; align-items:center; justify-content:center; padding:16px;}
+  #calc[hidden]{display:none;}
+  #calc .sheet{background:#fff; border-radius:18px; padding:22px 20px 20px;
+    max-width:420px; width:100%; max-height:88vh; overflow:auto; position:relative;
+    box-shadow:0 10px 40px rgba(0,0,0,.25);}
+  #calc .mclose{position:absolute; top:6px; right:6px; width:44px; height:44px; border:none;
+    background:none; font-size:20px; color:var(--ink-soft); cursor:pointer; touch-action:manipulation;}
+  #calc h3{font-size:17px; color:var(--ink); margin-bottom:4px;}
+  #calc .sub{font-size:12.5px; color:var(--ink-soft); line-height:1.6; margin-bottom:16px;}
+  #calc .seglabel{font-size:12.5px; color:var(--ink); font-weight:600; margin-bottom:8px;}
+  #calc .seg{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;}
+  #calc .seg button{
+    flex:1 1 auto; min-width:58px; height:44px; border:1px solid var(--line);
+    background:#fff; border-radius:10px; font-size:13px; color:var(--ink);
+    font-family:inherit; cursor:pointer; touch-action:manipulation;
+  }
+  #calc .seg button.on{background:var(--denim); border-color:var(--denim); color:#fff;}
+  #calc .selwrap{position:relative; margin-bottom:18px;}
+  #calc .selwrap::after{content:"▾"; position:absolute; right:15px; top:50%;
+    transform:translateY(-50%); color:var(--ink-soft); pointer-events:none; font-size:13px;}
+  #calc select{
+    width:100%; height:50px; font-size:16px; font-family:inherit; color:var(--ink);
+    border:1px solid var(--line); border-radius:12px; padding:0 34px 0 14px; background:#fff;
+    -webkit-appearance:none; appearance:none; touch-action:manipulation;
+  }
+  #calc select:focus{outline:2px solid var(--denim); outline-offset:1px;}
+  #calc .result{border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+  #calc .result .row{display:flex; align-items:center; justify-content:space-between;
+    padding:0 16px; height:52px; border-top:1px solid var(--line);}
+  #calc .result .row:first-child{border-top:none;}
+  #calc .result .row .k{color:var(--ink-soft); font-size:13px;}
+  #calc .result .row .v{font-size:16px; font-weight:600; font-variant-numeric:tabular-nums;}
+  #calc .result .row.hit{background:#EAF0F8;}
+  #calc .result .row.hit .k{color:var(--denim);}
+  #calc .result .row .v.none{color:#B9C4CE; font-weight:400; font-size:13px;}
+  #calc .result .row .rv{display:flex; align-items:baseline; gap:6px;}
+  #calc .result .row .v.approx{color:var(--denim);}
+  #calc .result .row .mmh{font-size:11px; color:var(--ink-soft); font-variant-numeric:tabular-nums;}
+  #calc .yarn{display:none; margin-top:10px; background:#FFF8E6; border:1px solid #E6D08A;
+    border-radius:10px; padding:10px 12px; font-size:12.5px; color:#8A6420; line-height:1.6;}
+  #calc .yarn .yl{display:block; font-size:11px; color:#B07A2E; margin-bottom:3px;}
+  #calc .foot{font-size:11.5px; color:var(--ink-soft); line-height:1.6; margin-top:14px;}
+  /* 标签页 */
+  #calc .tabs{display:flex; gap:6px; margin:2px 34px 16px 0; background:#F0F3F7; padding:4px; border-radius:12px;}
+  #calc .tab{flex:1; height:42px; border:none; background:none; border-radius:9px;
+    font-size:14px; font-family:inherit; color:var(--ink-soft); cursor:pointer; touch-action:manipulation;}
+  #calc .tab.on{background:#fff; color:var(--denim); font-weight:600; box-shadow:0 1px 4px rgba(0,0,0,.1);}
+  #calc .tabview[hidden]{display:none;}
+  /* 密度计算模块 */
+  #calc .note{background:#FFF8E6; border:1px solid #E6D08A; color:#8A6420;
+    border-radius:10px; padding:10px 12px; font-size:11.5px; line-height:1.6; margin-bottom:16px;}
+  #calc .mod{border:1px solid var(--line); border-radius:14px; padding:14px 14px 12px; margin-bottom:14px;}
+  #calc .mod-t{font-size:14px; font-weight:600; color:var(--ink); margin-bottom:2px;}
+  #calc .mod-d{font-size:11.5px; color:var(--ink-soft); line-height:1.5; margin-bottom:12px;}
+  #calc .frow{display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
+  #calc .frow .fl{flex:0 0 auto; color:var(--ink-soft); font-size:13px; min-width:74px;}
+  #calc .frow input{
+    width:62px; height:42px; border:1.5px solid var(--ink); border-radius:9px;
+    text-align:center; font-size:15px; font-family:inherit; color:var(--ink); background:#fff;
+    -webkit-appearance:none; appearance:none; touch-action:manipulation; min-width:0;
+  }
+  #calc .frow input:focus{outline:2px solid var(--denim); outline-offset:1px; border-color:var(--denim);}
+  #calc .frow .u{color:var(--ink-soft); font-size:12.5px;}
+  #calc .res{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background:#E9F7EF; border:1px solid #9FD9BC; border-radius:10px;
+    padding:10px 14px; margin-top:4px; font-size:13px; color:#1F6B47;
+  }
+  #calc .res b{font-size:19px; font-variant-numeric:tabular-nums; color:#17593A;}
+  #calc .res .hint{font-size:11px; color:#3E8E6D; margin-left:4px;}
+  #calc .yarn-in{margin-bottom:10px;}
+  #calc .yl2{display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-size:13px; color:var(--ink-soft); margin-bottom:7px;}
+  #calc .ymodes{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; flex:none;}
+  #calc .ymodes .ym{height:36px; padding:0 14px; border:none; background:#fff; font-size:12px;
+    color:var(--ink-soft); font-family:inherit; cursor:pointer; touch-action:manipulation;}
+  #calc .ymodes .ym + .ym{border-left:1px solid var(--line);}
+  #calc .ymodes .ym.on{background:var(--denim); color:#fff;}
+  #calc .frow[hidden]{display:none;}
+
   /* 文字说明始终显示；窄屏只缩小尺寸，不隐藏 */
   @media (max-width:900px){ .btn{font-size:12px; padding:0 8px; height:36px;} #topbar{gap:4px;} }
   @media (prefers-reduced-motion:reduce){ *{transition:none !important;} }
@@ -234,8 +316,8 @@
 <body>
 
 <div id="topbar">
-  <button class="btn primary" id="openBtn">📄 <span class="t">打开 PDF</span></button>
-  <input type="file" id="fileInput" accept="application/pdf" hidden>
+  <button class="btn primary" id="openBtn">📄 <span class="t">打开图解</span></button>
+  <input type="file" id="fileInput" accept="application/pdf,image/*" hidden>
   <span class="sep"></span>
   <button class="btn" id="prev">‹</button>
   <span id="pageInfo">– / –</span>
@@ -257,8 +339,9 @@
   <span class="sep"></span>
   <button class="btn" id="clearSaved" title="清空缓存的图解 PDF 和所有保存的标尺、高亮、计数">🧹<span class="t"> 清除记录</span></button>
   <span style="flex:1"></span>
+  <button class="btn" id="calcBtn" title="针号换算">🧮<span class="t"> 换算</span></button>
   <button class="btn" id="fbBtn">💬<span class="t"> 反馈</span></button>
-  <button class="btn" id="tipBtn">🧡<span class="t"> 打赏</span></button>
+  <button class="btn" id="tipBtn" hidden>🧡<span class="t"> 打赏</span></button>
   <button class="btn" id="focusBtn">⛶<span class="t"> 专注</span></button>
 </div>
 <button id="peek" title="显示工具条" aria-label="显示工具条">⚙</button>
@@ -279,9 +362,9 @@
 <div id="empty">
   <div class="swatch">O / O \ O<br>| | O / \<br>\ O | | O</div>
   <h2>全屏看图解，标记跟着你走</h2>
-  <p>打开图解 PDF 自动铺满屏幕。细标尺对准当前行，高亮贴贴住你的尺码，漂浮计数器随手一点 +1。图解和进度都保存在本机浏览器里，下次打开自动恢复。</p>
+  <p>打开图解 PDF 或图片自动铺满屏幕。细标尺对准当前行，高亮贴贴住你的尺码，漂浮计数器随手一点 +1。图解和进度都保存在本机浏览器里，下次打开自动恢复。</p>
   <div class="row">
-    <button class="btn primary" id="openBtn2">📄 打开图解 PDF</button>
+    <button class="btn primary" id="openBtn2">📄 打开图解 PDF / 图片</button>
     <button class="btn" id="demoBtn">先用示例图解试试</button>
   </div>
 </div>
@@ -304,6 +387,73 @@
   </div>
 </div>
 
+<div id="calc" hidden>
+  <div class="sheet">
+    <button class="mclose" aria-label="关闭">×</button>
+    <div class="tabs">
+      <button class="tab on" data-tab="needle">🧮 针号换算</button>
+      <button class="tab" data-tab="gauge">📐 密度计算</button>
+    </div>
+
+    <div class="tabview" id="tab-needle">
+      <p class="sub">选好手里这根针的制式和号数，下面就显示它在各国的对应针号。</p>
+      <div class="seglabel">① 你的针号是哪种制式？</div>
+      <div class="seg" id="calcSeg"></div>
+      <div class="seglabel">② 选择号数</div>
+      <div class="selwrap"><select id="calcSel" aria-label="选择号数"></select></div>
+      <div class="result" id="calcResult"></div>
+      <div class="yarn" id="calcYarn"></div>
+      <p class="foot">「≈」表示国际表里没有完全相同的直径，取了最接近的号；买线配针时以毫米直径（mm）为准最保险。</p>
+    </div>
+
+    <div class="tabview" id="tab-gauge" hidden>
+      <div class="note">在<b>深色框</b>里填数字，<b>绿色格子</b>自动出结果。密度都按「10 厘米内的针数」算。</div>
+
+      <div class="mod">
+        <div class="mod-t">模块一 · 算合股数</div>
+        <div class="mod-d">已知图解线材规格，算自己的线要合几股才一样粗。线材可按「米/克」或「支数」填，两根各填各的都行。</div>
+        <div class="yarn-in" data-y="p">
+          <div class="yl2"><span>图解线材</span><span class="ymodes"><button class="ym on" data-m="mg">米/克</button><button class="ym" data-m="zhi">支数</button></span></div>
+          <div class="frow ymg"><input id="g1pm" inputmode="decimal"><span class="u">米 /</span><input id="g1pg" inputmode="decimal"><span class="u">克</span></div>
+          <div class="frow yzhi" hidden><input id="g1pa" inputmode="decimal"><span class="u">/</span><input id="g1pb" inputmode="decimal"><span class="u">支（如 2 / 26）</span></div>
+        </div>
+        <div class="yarn-in" data-y="s">
+          <div class="yl2"><span>自己线材</span><span class="ymodes"><button class="ym on" data-m="mg">米/克</button><button class="ym" data-m="zhi">支数</button></span></div>
+          <div class="frow ymg"><input id="g1sm" inputmode="decimal"><span class="u">米 /</span><input id="g1sg" inputmode="decimal"><span class="u">克</span></div>
+          <div class="frow yzhi" hidden><input id="g1sa" inputmode="decimal"><span class="u">/</span><input id="g1sb" inputmode="decimal"><span class="u">支</span></div>
+        </div>
+        <div class="res"><span>合股数</span><span><b id="g1out">—</b> 股 <span class="hint" id="g1hint"></span></span></div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-t">模块二 · 算该织哪个码</div>
+        <div class="mod-d">已知自己密度和想要的胸围，算出所需针数，再对照图解各码选最接近的</div>
+        <div class="frow"><span class="fl">自己密度</span><input id="g2d" inputmode="decimal"><span class="u">针 / 10cm</span></div>
+        <div class="frow"><span class="fl">所需胸围</span><input id="g2b" inputmode="decimal"><span class="u">cm</span></div>
+        <div class="res"><span>所需胸围针数</span><span><b id="g2out">—</b> 针</span></div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-t">模块三 · 算实际织出的胸围</div>
+        <div class="mod-d">用自己的密度，看图解某个码织出来实际有多大</div>
+        <div class="frow"><span class="fl">自己密度</span><input id="g3sd" inputmode="decimal"><span class="u">针 / 10cm</span></div>
+        <div class="frow"><span class="fl">图解密度</span><input id="g3pd" inputmode="decimal"><span class="u">针 / 10cm</span></div>
+        <div class="frow"><span class="fl">图解胸围</span><input id="g3pb" inputmode="decimal"><span class="u">cm</span></div>
+        <div class="res"><span>按自己密度所得胸围</span><span><b id="g3out">—</b> cm</span></div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-t">模块四 · 算要备多少线</div>
+        <div class="mod-d">已知图解所需米数，算自己的线要准备多少克</div>
+        <div class="frow"><span class="fl">图解所需</span><input id="g4m" inputmode="decimal"><span class="u">米</span></div>
+        <div class="frow"><span class="fl">自己线支数</span><input id="g4a" inputmode="decimal"><span class="u">/</span><input id="g4b" inputmode="decimal"><span class="u">支（如 2 / 26）</span></div>
+        <div class="frow"><span class="fl">自己合股数</span><input id="g4c" inputmode="decimal"><span class="u">股</span></div>
+        <div class="res"><span>需备线克数</span><span><b id="g4out">—</b> 克</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import * as pdfjsLib from "./pdf.min.js";
 pdfjsLib.GlobalWorkerOptions.workerSrc = "pdf.worker.min.js";
@@ -314,7 +464,7 @@ const stage = $("stage"), viewer = $("viewer"), hlLayer = $("hlLayer");
 const clamp = (v,a,b) => Math.min(Math.max(v,a),b);
 
 const state = {
-  pdf:null, pageNum:1, pageCount:0, scale:1, demo:false, file:null,
+  pdf:null, img:null, pageNum:1, pageCount:0, scale:1, demo:false, file:null,
   rulerH:{on:false, r:.3}, rulerV:{on:false, r:.5},
   pageHl:{}, drawColor:null, selHl:null, counters:[]
 };
@@ -400,23 +550,53 @@ function clearAllStorage(){
   toast("已清除所有本地记录");
 }
 
-/* ── PDF ── */
+/* ── 打开图解（PDF 或图片）── */
 $("openBtn").onclick = $("openBtn2").onclick = () => $("fileInput").click();
+const isImageFile = f => (f.type && f.type.startsWith("image/")) || /\.(png|jpe?g|gif|webp|bmp|heic|heif|avif)$/i.test(f.name);
+function loadImageFromBlob(blob){
+  return new Promise((res,rej)=>{
+    const img = new Image();
+    img.onload = ()=>res(img);                 // 解码完成，URL 保持存活以便缩放时重绘
+    img.onerror = ()=>rej(new Error("image decode failed"));
+    img.src = URL.createObjectURL(blob);
+  });
+}
 $("fileInput").onchange = async e => {
   const f = e.target.files[0]; if(!f) return;
   const mb = f.size / 1048576;
+  const asImage = isImageFile(f) && !/\.pdf$/i.test(f.name) && f.type !== "application/pdf";
+  $("empty").style.display="none";
+  $("loading").classList.add("show");
+
+  if(asImage){
+    $("loadText").textContent = `正在加载图片 · ${mb.toFixed(1)} MB`;
+    $("loadHint").textContent = mb > 20 ? "图片较大，可能稍慢一些 ⏳" : "";
+    try{
+      const img = await loadImageFromBlob(f);
+      state.img = img; state.pdf = null; state.demo = false;
+      state.pageCount = 1; state.pageNum = 1;
+      let cached = true;
+      try{ await idbPut({name:f.name, size:f.size, blob:f, kind:"img"}); }catch(_){ cached = false; }
+      state.file = {name:f.name, size:f.size};
+      stage.style.display="block";
+      await fitWidth();
+      queueSave();
+      toast(cached ? "图片已加载，刷新后会自动恢复" : "图片已加载（此浏览器无法缓存，刷新后需重新打开）");
+    }catch(err){ alert("图片无法打开，请换一张（iPad 拍的 HEIC 一般可以，安卓/电脑浏览器可能不支持 HEIC，可先转成 JPG）。"); $("empty").style.display=""; stage.style.display="none"; }
+    finally{ $("loading").classList.remove("show"); }
+    return;
+  }
+
   $("loadText").textContent = `正在加载 PDF · ${mb.toFixed(1)} MB`;
   $("loadHint").textContent = mb > 30 ? `文件较大（约 ${mb|0}MB），首次读取和解码可能需要几十秒，请耐心等待 ⏳`
                                 : mb > 8 ? `文件中等大小，可能稍慢一些 ⏳` : "";
-  $("loading").classList.add("show");
-  $("empty").style.display="none";
   try{
     const buf = await f.arrayBuffer();
     state.pdf = await pdfjsLib.getDocument({data: buf}).promise;
-    state.demo=false;
+    state.demo=false; state.img=null;
     /* 把文件本身缓存进 IndexedDB，刷新后自动恢复 */
     let cached = true;
-    try{ await idbPut({name:f.name, size:f.size, blob:f}); }catch(_){ cached = false; }
+    try{ await idbPut({name:f.name, size:f.size, blob:f, kind:"pdf"}); }catch(_){ cached = false; }
     /* 同一个文件恢复上次页码（超过总页数则截断），换了文件从第 1 页开始；高亮贴保留 */
     const sameFile = state.file && state.file.name === f.name && state.file.size === f.size;
     const lastPage = (sameFile && typeof state.pageNum === "number" && state.pageNum >= 1 && state.pageNum <= state.pdf.numPages)
@@ -433,6 +613,7 @@ $("fileInput").onchange = async e => {
 };
 
 async function fitWidth(){
+  if(state.img){ state.scale = (viewer.clientWidth-16) / state.img.naturalWidth; render(); return; }
   if(state.demo){ state.scale=Math.max(.8,(viewer.clientWidth-16)/760); render(); return; }
   if(!state.pdf) return;
   const page = await state.pdf.getPage(state.pageNum);
@@ -440,7 +621,21 @@ async function fitWidth(){
   render();
 }
 
+function renderImage(){
+  const img = state.img; if(!img) return;
+  const w = img.naturalWidth*state.scale, h = img.naturalHeight*state.scale;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  canvas.style.width = w+"px"; canvas.style.height = h+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  ctx.drawImage(img, 0, 0, w, h);
+  $("pageInfo").textContent = "图片";
+  baseW=w; baseH=h; renderedScale=state.scale;
+}
+
 async function render(){
+  if(state.img){ renderImage(); afterRender(); return; }
   if(state.demo){ renderDemo(); afterRender(); return; }
   if(!state.pdf) return;
   const page = await state.pdf.getPage(state.pageNum);
@@ -491,7 +686,7 @@ viewer.addEventListener("pointercancel", ptEnd);
 
 /* ── 示例图解 ── */
 $("demoBtn").onclick = () => {
-  state.demo=true; state.pdf=null; state.pageCount=1; state.pageNum=1;
+  state.demo=true; state.pdf=null; state.img=null; state.pageCount=1; state.pageNum=1;
   $("pageInfo").textContent="示例";
   $("empty").style.display="none"; stage.style.display="block";
   fitWidth();
@@ -765,17 +960,27 @@ else { addCounter("行数"); addCounter("花样重复"); }
     $("loading").classList.add("show");
     $("empty").style.display="none";
     try{
-      state.pdf = await pdfjsLib.getDocument({data: await rec.blob.arrayBuffer()}).promise;
-      state.demo = false;
-      state.pageCount = state.pdf.numPages;
-      state.pageNum = clamp(typeof state.pageNum === "number" ? state.pageNum : 1, 1, state.pageCount);
-      state.file = {name:rec.name, size:rec.size};
-      stage.style.display="block";
-      await (hadSave ? render() : fitWidth());
-      toast(`已恢复上次的图解${rec.name ? "：" + rec.name : ""}`);
+      if(rec.kind === "img"){
+        state.img = await loadImageFromBlob(rec.blob);
+        state.pdf = null; state.demo = false;
+        state.pageCount = 1; state.pageNum = 1;
+        state.file = {name:rec.name, size:rec.size};
+        stage.style.display="block";
+        await (hadSave ? render() : fitWidth());
+        toast(`已恢复上次的图片${rec.name ? "：" + rec.name : ""}`);
+      } else {
+        state.pdf = await pdfjsLib.getDocument({data: await rec.blob.arrayBuffer()}).promise;
+        state.demo = false; state.img = null;
+        state.pageCount = state.pdf.numPages;
+        state.pageNum = clamp(typeof state.pageNum === "number" ? state.pageNum : 1, 1, state.pageCount);
+        state.file = {name:rec.name, size:rec.size};
+        stage.style.display="block";
+        await (hadSave ? render() : fitWidth());
+        toast(`已恢复上次的图解${rec.name ? "：" + rec.name : ""}`);
+      }
     }catch(err){
       $("empty").style.display=""; stage.style.display="none";
-      toast("缓存的图解恢复失败，请重新打开 PDF");
+      toast("缓存的图解恢复失败，请重新打开");
     }finally{ $("loading").classList.remove("show"); }
   } else if(state.demo){
     state.pageCount = 1; $("pageInfo").textContent = "示例";
@@ -788,7 +993,7 @@ else { addCounter("行数"); addCounter("花样重复"); }
 const MODALS = {
   fb:{ img:"feedback-qr.png",
        title:"碰到问题？直接找我 💬",
-       text:"扫码加我微信（备注「图解伴侣」），我拉你进编织群——bug、建议、想要的新功能，群里说都行。",
+       text:"添加我微信：majiayooo（备注「图解伴侣」）。bug、建议、想要的新功能，都可以直接跟我说～",
        setup:"站长设置：把你的微信二维码截图命名为 feedback-qr.png，和本网页文件放在同一个文件夹（GitHub 仓库根目录），刷新即可显示。" },
   tip:{ img:"tip-qr.png",
        title:"请我喝杯奶茶 🧋",
@@ -809,6 +1014,196 @@ $("fbBtn").onclick=()=>openModal("fb");
 $("tipBtn").onclick=()=>openModal("tip");
 $("modal").addEventListener("click", e=>{
   if(e.target.id==="modal" || e.target.classList.contains("mclose")) $("modal").hidden=true;
+});
+
+/* ── 针号换算 ── 数据照《棒针针号对照表》录入，空格＝该制式无对应号 */
+const NEEDLES = [
+  {mm:"1.2",  cn:"18号", jp:"",     us:"",      uk:""},
+  {mm:"1.4",  cn:"17号", jp:"",     us:"",      uk:""},
+  {mm:"1.6",  cn:"16号", jp:"",     us:"",      uk:""},
+  {mm:"1.8",  cn:"15号", jp:"",     us:"",      uk:""},
+  {mm:"2.0",  cn:"14号", jp:"",     us:"0号",   uk:"14号"},
+  {mm:"2.1",  cn:"",     jp:"0号",  us:"",      uk:""},
+  {mm:"2.25", cn:"",     jp:"",     us:"1号",   uk:"13号"},
+  {mm:"2.3",  cn:"13号", jp:"",     us:"",      uk:""},
+  {mm:"2.4",  cn:"",     jp:"1号",  us:"",      uk:""},
+  {mm:"2.6",  cn:"12号", jp:"",     us:"",      uk:""},
+  {mm:"2.7",  cn:"",     jp:"2号",  us:"",      uk:""},
+  {mm:"2.75", cn:"",     jp:"",     us:"2号",   uk:"12号"},
+  {mm:"2.9",  cn:"11号", jp:"",     us:"",      uk:""},
+  {mm:"3.0",  cn:"",     jp:"3号",  us:"",      uk:"11号"},
+  {mm:"3.2",  cn:"10号", jp:"",     us:"",      uk:""},
+  {mm:"3.25", cn:"",     jp:"",     us:"3号",   uk:"10号"},
+  {mm:"3.3",  cn:"",     jp:"4号",  us:"",      uk:""},
+  {mm:"3.5",  cn:"9号",  jp:"",     us:"4号",   uk:""},
+  {mm:"3.6",  cn:"",     jp:"5号",  us:"",      uk:""},
+  {mm:"3.75", cn:"",     jp:"",     us:"5号",   uk:"9号"},
+  {mm:"3.9",  cn:"",     jp:"6号",  us:"",      uk:""},
+  {mm:"4.0",  cn:"8号",  jp:"",     us:"6号",   uk:"8号"},
+  {mm:"4.2",  cn:"",     jp:"7号",  us:"",      uk:""},
+  {mm:"4.4",  cn:"7号",  jp:"",     us:"",      uk:""},
+  {mm:"4.5",  cn:"",     jp:"8号",  us:"7号",   uk:"7号"},
+  {mm:"4.8",  cn:"6号",  jp:"9号",  us:"",      uk:""},
+  {mm:"5.0",  cn:"5号",  jp:"",     us:"8号",   uk:"6号"},
+  {mm:"5.1",  cn:"",     jp:"10号", us:"",      uk:""},
+  {mm:"5.4",  cn:"",     jp:"11号", us:"",      uk:""},
+  {mm:"5.5",  cn:"4号",  jp:"",     us:"9号",   uk:"5号"},
+  {mm:"5.7",  cn:"",     jp:"12号", us:"",      uk:""},
+  {mm:"6.0",  cn:"3号",  jp:"13号", us:"10号",  uk:"4号"},
+  {mm:"6.3",  cn:"",     jp:"14号", us:"",      uk:""},
+  {mm:"6.5",  cn:"",     jp:"",     us:"10.5号",uk:"3号"},
+  {mm:"6.6",  cn:"",     jp:"15号", us:"",      uk:""},
+  {mm:"7.0",  cn:"2号",  jp:"7mm",  us:"",      uk:"2号"},
+  {mm:"7.5",  cn:"",     jp:"",     us:"",      uk:"1号"},
+  {mm:"8.0",  cn:"1号",  jp:"8mm",  us:"11号",  uk:"0号"},
+  {mm:"9.0",  cn:"",     jp:"",     us:"13号",  uk:"00号"},
+  {mm:"10.0", cn:"",     jp:"10mm", us:"15号",  uk:"000号"}
+];
+const SYS = [
+  {key:"mm", label:"公制 mm"},
+  {key:"cn", label:"中国针号"},
+  {key:"jp", label:"日本针号"},
+  {key:"us", label:"美国针号"},
+  {key:"uk", label:"英国针号"}
+];
+const nDisp = (n,key) => key==="mm" ? n.mm+" mm" : n[key];
+/* 中国针号适用毛线（照《中国针号专表》，13号原文有几字未认清，暂按可读部分） */
+const YARN_CN = {
+  "1号":"羊驼毛线、等粗毛线", "2号":"粗羊毛线＋马海毛2股、冰条线等粗毛线",
+  "3号":"马海毛4股、情人棉等粗毛线", "4号":"羊毛线6股、粗毛线",
+  "5号":"马海毛2股、粗毛线", "6号":"粗毛线", "7号":"粗毛线",
+  "8号":"细羊毛3股、马海毛单股、中粗线", "9号":"细羊毛线双股、中粗线",
+  "10号":"马海毛单股、4股萌娃娃、中粗线", "11号":"12p、马海毛单股、中细线",
+  "12号":"中细线", "13号":"细羊毛双股、中细线", "14号":"细毛线", "15号":"细毛线",
+  "16号":"特细毛线", "17号":"特细毛线", "18号":"特细毛线"
+};
+const NEAR_MAX = 0.3;   // mm：直径差超过它就算「无对应」，不硬凑近似
+/* 每个制式预建 {mm,mmStr,val} 列表，用于找最接近的号 */
+const sysEntries = {};
+SYS.forEach(s=>{
+  if(s.key==="mm") return;
+  sysEntries[s.key] = NEEDLES
+    .filter(n=>n[s.key])
+    .map(n=>({mm:parseFloat(n.mm), mmStr:n.mm, val:n[s.key]}));
+});
+function nearestIn(key, targetMm){
+  let best=null, bestD=Infinity;
+  for(const e of sysEntries[key]){
+    const d=Math.abs(e.mm-targetMm);
+    if(d<bestD){ bestD=d; best=e; }
+  }
+  return (best && bestD<=NEAR_MAX) ? {val:best.val, mmStr:best.mmStr, exact:bestD<1e-9} : null;
+}
+let calcSys = "mm";
+let calcIdx = Math.max(0, NEEDLES.findIndex(n=>n.mm==="4.0"));   // 默认停在 4.0mm，常用尺寸
+function calcRenderSeg(){
+  const box=$("calcSeg"); box.innerHTML="";
+  SYS.forEach(s=>{
+    const b=document.createElement("button");
+    b.textContent=s.label; b.classList.toggle("on", s.key===calcSys);
+    b.onclick=()=>{ calcSys=s.key; calcRenderSeg(); calcFillSelect(); };
+    box.appendChild(b);
+  });
+}
+function calcFillSelect(){
+  const sel=$("calcSel"); sel.innerHTML="";
+  let firstIdx=null, keep=null;
+  NEEDLES.forEach((n,i)=>{
+    if(!n[calcSys]) return;                 // 只列出该制式有对应号的行
+    if(firstIdx===null) firstIdx=i;
+    if(i===calcIdx) keep=i;                 // 切换制式时尽量停在同一根针上
+    const o=document.createElement("option");
+    o.value=i; o.textContent=nDisp(n,calcSys);
+    sel.appendChild(o);
+  });
+  const use = keep!==null ? keep : firstIdx;
+  sel.value=String(use); calcShow(use);
+}
+function calcShow(i){
+  calcIdx=i; const n=NEEDLES[i]; const M=parseFloat(n.mm);
+  const box=$("calcResult"); box.innerHTML="";
+  let cnVal=null, cnApprox=false;               // 记录最终的中国号，用于查适用毛线
+  SYS.forEach(s=>{
+    const row=document.createElement("div");
+    row.className="row"+(s.key===calcSys?" hit":"");
+    let rv;
+    if(s.key==="mm"){
+      rv=`<span class="v">${nDisp(n,"mm")}</span>`;
+    }else if(n[s.key]){                          // 该直径本就有这个制式的号
+      rv=`<span class="v">${n[s.key]}</span>`;
+      if(s.key==="cn"){ cnVal=n[s.key]; cnApprox=false; }
+    }else{                                       // 没有完全对应，取最接近
+      const near=nearestIn(s.key, M);
+      if(near){
+        rv=`<span class="v approx">≈ ${near.val}</span><span class="mmh">${near.mmStr} mm</span>`;
+        if(s.key==="cn"){ cnVal=near.val; cnApprox=true; }
+      }else{
+        rv=`<span class="v none">无对应</span>`;
+      }
+    }
+    row.innerHTML=`<span class="k">${s.label}</span><span class="rv">${rv}</span>`;
+    box.appendChild(row);
+  });
+  const yb=$("calcYarn");
+  if(cnVal && YARN_CN[cnVal]){
+    yb.style.display="block";
+    yb.innerHTML=`<span class="yl">适用毛线（中国${cnApprox?" ≈ ":""}${cnVal}）</span>${YARN_CN[cnVal]}`;
+  }else{ yb.style.display="none"; }
+}
+$("calcSel").onchange = e => calcShow(+e.target.value);
+$("calcBtn").onclick = ()=>{ $("calc").hidden=false; };
+$("calc").addEventListener("click", e=>{
+  if(e.target.id==="calc" || e.target.classList.contains("mclose")) $("calc").hidden=true;
+});
+calcRenderSeg(); calcFillSelect();
+
+/* ── 换算弹窗内的标签页切换 ── */
+document.querySelectorAll("#calc .tab").forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll("#calc .tab").forEach(x=>x.classList.toggle("on", x===t));
+    $("tab-needle").hidden = t.dataset.tab!=="needle";
+    $("tab-gauge").hidden  = t.dataset.tab!=="gauge";
+  };
+});
+
+/* ── 密度计算：公式照《织女计算表》，输入即算，绿格出结果 ── */
+const gnum = id => { const v=parseFloat($(id).value); return isFinite(v) ? v : NaN; };
+function gset(id, val, dp){
+  $(id).textContent = isFinite(val) ? String(dp===0 ? Math.round(val) : +val.toFixed(dp)) : "—";
+}
+/* 一根线的「每克米数」：米/克模式=米÷克；支数模式 a/b（a股b支）=b÷a */
+function ymMode(y){ const b=document.querySelector(`.yarn-in[data-y="${y}"] .ym.on`); return b ? b.dataset.m : "mg"; }
+function yarnMpg(y){
+  if(ymMode(y)==="mg"){ const m=gnum("g1"+y+"m"), g=gnum("g1"+y+"g"); return (m>0&&g>0) ? m/g : NaN; }
+  const a=gnum("g1"+y+"a"), b=gnum("g1"+y+"b"); return (a>0&&b>0) ? b/a : NaN;
+}
+function gaugeCalc(){
+  // 一：合股数 =（自己每克米数）÷（图解每克米数），两根线各支持米/克或支数
+  const pmpg=yarnMpg("p"), smpg=yarnMpg("s");
+  const s1 = (pmpg>0&&smpg>0) ? smpg/pmpg : NaN;
+  gset("g1out", s1, 1);
+  $("g1hint").textContent = isFinite(s1) ? "≈ 取 "+Math.max(1,Math.round(s1))+" 股" : "";
+  // 二：所需胸围针数 = 胸围 ÷ 10 × 密度
+  const d2=gnum("g2d"), b2=gnum("g2b");
+  gset("g2out", (isFinite(d2)&&isFinite(b2)) ? b2/10*d2 : NaN, 0);
+  // 三：按自己密度所得胸围 = 图解密度 ÷ 自己密度 × 图解胸围
+  const sd=gnum("g3sd"), pd=gnum("g3pd"), pb=gnum("g3pb");
+  gset("g3out", (sd>0&&isFinite(pd)&&isFinite(pb)) ? pd/sd*pb : NaN, 1);
+  // 四：需备线克数 = 米数 × 股数 × 合股 ÷ 支数
+  const m4=gnum("g4m"), a4=gnum("g4a"), b4=gnum("g4b"), c4=gnum("g4c");
+  gset("g4out", (isFinite(m4)&&isFinite(a4)&&b4>0&&isFinite(c4)) ? m4*a4*c4/b4 : NaN, 0);
+}
+$("tab-gauge").addEventListener("input", gaugeCalc);
+/* 模块一：米/克 ↔ 支数 切换 */
+document.querySelectorAll("#tab-gauge .yarn-in").forEach(y=>{
+  y.querySelectorAll(".ym").forEach(btn=>{
+    btn.onclick=()=>{
+      y.querySelectorAll(".ym").forEach(b=>b.classList.toggle("on", b===btn));
+      y.querySelector(".ymg").hidden  = btn.dataset.m!=="mg";
+      y.querySelector(".yzhi").hidden = btn.dataset.m!=="zhi";
+      gaugeCalc();
+    };
+  });
 });
 
 /* ── 专注模式 ── */
