@@ -105,17 +105,28 @@
   }
   body.focus #peek{display:flex;}
 
-  /* ── 标尺：整条 44px 透明区都能拖（元素本体＝热区，命中稳），中间 15px 荧光色带是可见部分 ── */
+  /* ── 标尺：整条 44px 透明区都能拖（元素本体＝热区，命中稳），中间荧光色带是可见部分；宽度由 --ruler-size 控制 ── */
   .ruler{position:absolute; z-index:6; touch-action:none; cursor:grab;}
   .ruler:active{cursor:grabbing;}
   .ruler.h{left:-8px; right:-8px; height:44px; background:transparent;}
   .ruler.v{top:-8px; bottom:-8px; width:44px; background:transparent;}
   .ruler::before{content:""; position:absolute; pointer-events:none;}   /* 只是可见色带，命中交给元素本体 */
-  .ruler.h::before{left:0; right:0; top:50%; transform:translateY(-50%); height:15px;
+  .ruler.h::before{left:0; right:0; top:50%; transform:translateY(-50%); height:var(--ruler-size,15px);
     background:rgba(255,232,0,.45); border-top:1.5px solid rgba(240,205,0,.8); border-bottom:1.5px solid rgba(240,205,0,.8);}
-  .ruler.v::before{top:0; bottom:0; left:50%; transform:translateX(-50%); width:15px;
+  .ruler.v::before{top:0; bottom:0; left:50%; transform:translateX(-50%); width:var(--ruler-size,15px);
     background:rgba(255,45,149,.34); border-left:1.5px solid rgba(235,20,130,.75); border-right:1.5px solid rgba(235,20,130,.75);}
   .ruler.gone{display:none;}
+  /* 标尺宽度调节手柄：放在色带边缘，拖动改宽度 */
+  .ruler.h .ruler-rs{
+    position:absolute; left:0; right:0; height:12px;
+    top:calc(50% + var(--ruler-size,15px) / 2 - 5px);
+    cursor:ns-resize; touch-action:none;
+  }
+  .ruler.v .ruler-rs{
+    position:absolute; top:0; bottom:0; width:12px;
+    left:calc(50% + var(--ruler-size,15px) / 2 - 5px);
+    cursor:ew-resize; touch-action:none;
+  }
 
   /* ── 高亮便签贴：改为「点选」而非 hover ── */
   #hlLayer{position:absolute; inset:0; z-index:4;}
@@ -230,6 +241,28 @@
   }
   #toast.show{opacity:1;}
 
+  /* ── 推荐工具下拉菜单 ── */
+  #toolsMenu{
+    position:fixed; z-index:50; display:none;
+    background:var(--panel-strong);
+    -webkit-backdrop-filter:blur(30px) saturate(180%); backdrop-filter:blur(30px) saturate(180%);
+    border:1px solid var(--line); border-radius:4px;
+    box-shadow:0 4px 20px rgba(31,26,20,.14);
+    padding:6px 0; min-width:240px;
+  }
+  #toolsMenu.show{display:block;}
+  #toolsMenu a{
+    display:flex; align-items:flex-start; gap:10px;
+    padding:10px 16px; text-decoration:none; color:var(--ink);
+    transition:background .12s;
+  }
+  #toolsMenu a:hover{background:var(--surface-deep);}
+  #toolsMenu a .icon{font-size:18px; flex:none; margin-top:1px;}
+  #toolsMenu a .info .name{display:block; font-size:13px; font-weight:500; color:var(--ink);}
+  #toolsMenu a .info .desc{display:block; font-size:11.5px; color:var(--ink-2); margin-top:2px; line-height:1.5;}
+  #toolsMenu .menu-hd{padding:8px 16px 4px; font-size:11px; letter-spacing:.08em;
+    color:var(--ink-3); font-weight:500;}
+
   /* ── 反馈 / 打赏弹窗 ── */
   #modal{position:fixed; inset:0; background:rgba(31,26,20,.45); z-index:70;
     display:flex; align-items:center; justify-content:center; padding:20px;}
@@ -240,7 +273,7 @@
     background:none; font-size:20px; color:var(--ink-2); cursor:pointer; touch-action:manipulation;}
   #modal h3{font-size:20px; margin-bottom:16px; color:var(--ink); font-weight:600; font-family:var(--serif); letter-spacing:-0.01em;}
   #modal img{width:200px; height:200px; object-fit:contain; border:1px solid var(--line); border-radius:2px;}
-  #modal p{font-size:15px; color:var(--ink); line-height:1.8; margin-top:14px; font-weight:400;}
+  #modal p{font-size:15px; color:var(--ink); line-height:1.8; margin-top:14px; font-weight:400; white-space:pre-wrap;}
 
   /* ── 针号换算弹窗 ── */
   #calc{position:fixed; inset:0; background:rgba(31,26,20,.45); z-index:70;
@@ -344,8 +377,8 @@
   <span id="pageInfo">– / –</span>
   <span class="sep"></span>
   <button class="btn" id="zOut">−</button>
-  <button class="btn" id="zFit">⤢<span class="t"> 适应宽度</span></button>
   <button class="btn" id="zIn">＋</button>
+  <button class="btn" id="rotBtn">↻<span class="t"> 旋转</span></button>
   <span class="sep"></span>
   <button class="btn" id="rH">─<span class="t"> 横标尺</span></button>
   <button class="btn" id="rV">│<span class="t"> 纵标尺</span></button>
@@ -358,9 +391,10 @@
   <button class="btn" id="awake">☕<span class="t"> 常亮</span></button>
   <span style="flex:1"></span>
   <button class="btn" id="calcBtn" title="针号&amp;密度换算">🧮<span class="t"> 针号&amp;密度换算</span></button>
-  <button class="btn" id="fbBtn">💬<span class="t"> 反馈</span></button>
+  <button class="btn" id="toolsBtn">🔗<span class="t"> 推荐工具</span></button>
+  <button class="btn" id="fbBtn">🍾<span class="t"> 许愿瓶</span></button>
   <button class="btn" id="tipBtn" hidden>🧡<span class="t"> 打赏</span></button>
-  <button class="btn" id="focusBtn">⛶<span class="t"> 专注</span></button>
+  <button class="btn" id="focusBtn">⛶<span class="t"> 隐藏菜单</span></button>
 </div>
 <button id="peek" title="显示工具条" aria-label="显示工具条">⚙</button>
 
@@ -368,8 +402,8 @@
   <div id="stage" style="display:none">
     <canvas id="pdfCanvas"></canvas>
     <div id="hlLayer"></div>
-    <div class="ruler h gone" id="rulerH" tabindex="0" aria-label="横向标尺（荧光行标）"></div>
-    <div class="ruler v gone" id="rulerV" tabindex="0" aria-label="纵向标尺（荧光针标）"></div>
+    <div class="ruler h gone" id="rulerH" tabindex="0" aria-label="横向标尺（荧光行标）"><div class="ruler-rs"></div></div>
+    <div class="ruler v gone" id="rulerV" tabindex="0" aria-label="纵向标尺（荧光针标）"><div class="ruler-rs"></div></div>
   </div>
 </div>
 
@@ -389,6 +423,18 @@
   <div class="lh" id="loadHint"></div>
 </div>
 <div id="toast"></div>
+
+<!-- 推荐工具下拉菜单：以后加友情链接在这里加 <a> 即可 -->
+<div id="toolsMenu">
+  <div class="menu-hd">编织好工具</div>
+  <a href="https://illusion-stitch-studio.pages.dev" target="_blank" rel="noopener">
+    <span class="icon">🎨</span>
+    <span class="info">
+      <span class="name">光栅编织图解生成器</span>
+      <span class="desc">by 翡晔楼 · 把图片变成光栅编织图解</span>
+    </span>
+  </a>
+</div>
 
 <div id="modal" hidden>
   <div class="sheet">
@@ -480,6 +526,8 @@ const clamp = (v,a,b) => Math.min(Math.max(v,a),b);
 const state = {
   pdf:null, img:null, pageNum:1, pageCount:0, scale:1, demo:false, file:null,
   rulerH:{on:false, r:.3}, rulerV:{on:false, r:.5},
+  rulerHSize:15, rulerVSize:15,   /* 标尺色带可见宽度（px），可拖动调节 */
+  rotation:0,                      /* 图解旋转角度：0/90/180/270 */
   pageHl:{}, drawColor:null, selHl:null, counters:[]
 };
 const YARN = ["--yarn-1","--yarn-2","--yarn-3","--yarn-4","--yarn-5"];
@@ -520,6 +568,9 @@ function persistNow(){
     const data = {
       rulerH: state.rulerH,
       rulerV: state.rulerV,
+      rulerHSize: state.rulerHSize,
+      rulerVSize: state.rulerVSize,
+      rotation: state.rotation,
       pageNum: state.pageNum,
       scale: state.scale,
       file: state.file,
@@ -542,6 +593,9 @@ function restoreFromStorage(){
     const d = JSON.parse(raw);
     if(d.rulerH) state.rulerH = d.rulerH;
     if(d.rulerV) state.rulerV = d.rulerV;
+    if(typeof d.rulerHSize === "number") state.rulerHSize = d.rulerHSize;
+    if(typeof d.rulerVSize === "number") state.rulerVSize = d.rulerVSize;
+    if(typeof d.rotation === "number") state.rotation = d.rotation;
     if(typeof d.pageNum === "number") state.pageNum = d.pageNum;
     if(typeof d.scale === "number") state.scale = d.scale;
     if(d.file && typeof d.file === "object") state.file = d.file;
@@ -556,6 +610,7 @@ function clearAllStorage(){
   try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
   idbDel().catch(()=>{});
   state.rulerH = {on:false, r:.3}; state.rulerV = {on:false, r:.5};
+  state.rulerHSize = 15; state.rulerVSize = 15; state.rotation = 0;
   state.pageHl = {}; state.counters = []; state.file = null;
   document.body.classList.remove("collapsed");
   $("collapseC")?.classList.remove("on");
@@ -627,25 +682,43 @@ $("fileInput").onchange = async e => {
 };
 
 async function fitWidth(){
-  if(state.img){ state.scale = (viewer.clientWidth-16) / state.img.naturalWidth; render(); return; }
+  const rot = state.rotation || 0;
+  const swap = rot===90 || rot===270;
+  if(state.img){
+    const eff = swap ? state.img.naturalHeight : state.img.naturalWidth;
+    state.scale = (viewer.clientWidth-16) / eff; render(); return;
+  }
   if(state.demo){ state.scale=Math.max(.8,(viewer.clientWidth-16)/760); render(); return; }
   if(!state.pdf) return;
   const page = await state.pdf.getPage(state.pageNum);
-  state.scale = (viewer.clientWidth-16) / page.getViewport({scale:1}).width;
+  state.scale = (viewer.clientWidth-16) / page.getViewport({scale:1, rotation: rot}).width;
   render();
 }
 
 function renderImage(){
   const img = state.img; if(!img) return;
-  const w = img.naturalWidth*state.scale, h = img.naturalHeight*state.scale;
+  const rot = state.rotation || 0;
+  const swap = rot===90 || rot===270;
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  /* 旋转后画布尺寸：90°/270° 时宽高互换 */
+  const dw = swap ? ih*state.scale : iw*state.scale;
+  const dh = swap ? iw*state.scale : ih*state.scale;
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = w*dpr; canvas.height = h*dpr;
-  canvas.style.width = w+"px"; canvas.style.height = h+"px";
+  canvas.width = dw*dpr; canvas.height = dh*dpr;
+  canvas.style.width = dw+"px"; canvas.style.height = dh+"px";
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.clearRect(0,0,w,h);
-  ctx.drawImage(img, 0, 0, w, h);
+  ctx.clearRect(0,0,dw,dh);
+  if(rot===0){
+    ctx.drawImage(img, 0, 0, dw, dh);
+  } else {
+    ctx.save();
+    ctx.translate(dw/2, dh/2);
+    ctx.rotate(rot * Math.PI / 180);
+    ctx.drawImage(img, -iw*state.scale/2, -ih*state.scale/2, iw*state.scale, ih*state.scale);
+    ctx.restore();
+  }
   $("pageInfo").textContent = "图片";
-  baseW=w; baseH=h; renderedScale=state.scale;
+  baseW=dw; baseH=dh; renderedScale=state.scale;
 }
 
 async function render(){
@@ -653,7 +726,7 @@ async function render(){
   if(state.demo){ renderDemo(); afterRender(); return; }
   if(!state.pdf) return;
   const page = await state.pdf.getPage(state.pageNum);
-  const vp = page.getViewport({scale: state.scale});
+  const vp = page.getViewport({scale: state.scale, rotation: state.rotation || 0});
   const dpr = window.devicePixelRatio || 1;
   canvas.width = vp.width*dpr; canvas.height = vp.height*dpr;
   canvas.style.width = vp.width+"px"; canvas.style.height = vp.height+"px";
@@ -664,9 +737,14 @@ async function render(){
 }
 function afterRender(){ placeRulers(); renderHls(); }
 
-$("zIn").onclick  = () => { state.scale=clamp(state.scale*1.15,.3,5); render(); queueSave(); };
-$("zOut").onclick = () => { state.scale=clamp(state.scale/1.15,.3,5); render(); queueSave(); };
-$("zFit").onclick = () => { fitWidth(); queueSave(); };
+$("zIn").onclick  = () => { if(needDoc())return; state.scale=clamp(state.scale*1.15,.3,5); render(); queueSave(); };
+$("zOut").onclick = () => { if(needDoc())return; state.scale=clamp(state.scale/1.15,.3,5); render(); queueSave(); };
+$("rotBtn").onclick = () => {
+  if(needDoc()) return;
+  state.rotation = ((state.rotation || 0) + 90) % 360;
+  render(); queueSave();
+  toast(`已旋转 ${state.rotation}°`);
+};
 
 /* ── PDF 连续下滑：滑到底再下滑翻下一页；滑到顶再上滑回上一页（仅多页 PDF）── */
 let flipLock=false;
@@ -769,8 +847,11 @@ function renderDemo(){
 /* ── 标尺 ── */
 function placeRulers(){
   const h=canvas.clientHeight, w=canvas.clientWidth;
-  $("rulerH").style.top=(state.rulerH.r*h-22)+"px";    // -22 = 让 44px 热区（含中间色带）中心对齐该行
+  $("rulerH").style.top=(state.rulerH.r*h-22)+"px";
   $("rulerV").style.left=(state.rulerV.r*w-22)+"px";
+  /* 把色带宽度同步给 CSS 变量，::before 和 .ruler-rs 都用它 */
+  $("rulerH").style.setProperty("--ruler-size", (state.rulerHSize||15)+"px");
+  $("rulerV").style.setProperty("--ruler-size", (state.rulerVSize||15)+"px");
   $("rulerH").classList.toggle("gone", !state.rulerH.on);
   $("rulerV").classList.toggle("gone", !state.rulerV.on);
   $("rH").classList.toggle("on", state.rulerH.on);
@@ -784,6 +865,7 @@ function dragRuler(el, axis, key){
   // 注意：读 state[key] 而不是记住对象引用——restoreFromStorage 会整体替换 state.rulerH/V，
   //       若记旧引用，拖动改的是旧对象、渲染读的是新对象，就会「拖了不动」。
   el.addEventListener("pointerdown", e=>{
+    if(e.target.classList.contains("ruler-rs")) return;   // 留给宽度调节手柄处理
     e.stopPropagation();                       // 别让 viewer 误认成缩放手势
     try{ el.setPointerCapture(e.pointerId); }catch(_){}
     let moved=false;
@@ -810,6 +892,33 @@ function dragRuler(el, axis, key){
 }
 dragRuler($("rulerH"),"y","rulerH");
 dragRuler($("rulerV"),"x","rulerV");
+
+/* ── 标尺宽度调节：拖动色带边缘的手柄 ── */
+function dragRulerSize(el, axis, sizeKey){
+  const handle = el.querySelector(".ruler-rs");
+  handle.addEventListener("pointerdown", e=>{
+    e.stopPropagation();
+    try{ handle.setPointerCapture(e.pointerId); }catch(_){}
+    const start = axis==="y" ? e.clientY : e.clientX;
+    const startSize = state[sizeKey] || 15;
+    const move = ev => {
+      const delta = (axis==="y" ? ev.clientY : ev.clientX) - start;
+      state[sizeKey] = clamp(startSize + delta, 4, 60);
+      placeRulers();
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      queueSave();
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  });
+}
+dragRulerSize($("rulerH"), "y", "rulerHSize");
+dragRulerSize($("rulerV"), "x", "rulerVSize");
 
 /* ── 高亮便签贴 ── */
 $("hlY").onclick=()=>{
@@ -1031,8 +1140,8 @@ else { addCounter("行数"); addCounter("花样重复"); }
 /* ── 反馈 / 打赏 ── */
 const MODALS = {
   fb:{ img:"feedback-qr.png",
-       title:"碰到问题？直接找我 💬",
-       text:"添加我微信：majiayooo（备注「图解伴侣」）。bug、建议、想要的新功能，都可以直接跟我说～" },
+       title:"许愿瓶 🍾",
+       text:"还有什么想要的功能，欢迎添加我微信和我说~\n微信：majiayooo（备注「图解伴侣」）" },
   tip:{ img:"tip-qr.png",
        title:"请我喝杯奶茶 🧋",
        text:"这个小工具免费使用。如果它陪你织完了一件作品，欢迎随意打赏，支持我继续改进～" }
@@ -1050,6 +1159,18 @@ function openModal(k){
 }
 $("fbBtn").onclick=()=>openModal("fb");
 $("tipBtn").onclick=()=>openModal("tip");
+
+/* ── 推荐工具菜单 ── */
+const toolsMenu=$("toolsMenu");
+$("toolsBtn").onclick=e=>{
+  e.stopPropagation();
+  const r=$("toolsBtn").getBoundingClientRect();
+  toolsMenu.style.top=(r.bottom+6)+"px";
+  toolsMenu.style.right=(window.innerWidth-r.right)+"px";
+  toolsMenu.classList.toggle("show");
+};
+document.addEventListener("click",()=>toolsMenu.classList.remove("show"));
+toolsMenu.addEventListener("click",e=>e.stopPropagation());
 $("modal").addEventListener("click", e=>{
   if(e.target.id==="modal" || e.target.classList.contains("mclose")) $("modal").hidden=true;
 });
@@ -1247,6 +1368,12 @@ document.querySelectorAll("#tab-gauge .yarn-in").forEach(y=>{
 /* ── 专注模式 ── */
 $("focusBtn").onclick=()=>{ $("topbar").classList.add("hidden"); document.body.classList.add("focus"); };
 $("peek").onclick=()=>{ $("topbar").classList.remove("hidden"); document.body.classList.remove("focus"); };
+
+/* 手机屏幕（≤640px）自动进入专注模式，避免工具条占满3行 */
+if(window.innerWidth <= 640){
+  $("topbar").classList.add("hidden");
+  document.body.classList.add("focus");
+}
 
 /* 旋转 / 改变窗口：把计数器拉回屏幕内 */
 window.addEventListener("resize", ()=>{ renderCounters(); if(stage.style.display!=="none") afterRender(); });
