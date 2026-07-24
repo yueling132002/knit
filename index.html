@@ -177,9 +177,11 @@
   .counter .tap{
     width:100%; border:none; background:none; cursor:pointer; font-family:inherit;
     padding:2px 0 8px; line-height:1; touch-action:none;
+    display:flex; flex-direction:column; align-items:center;
   }
   .counter .tap:active{background:var(--surface-deep);}
   .counter .num{font-family:var(--serif); font-size:38px; font-weight:300; font-variant-numeric:tabular-nums; letter-spacing:-0.02em;}
+  .counter .time{font-size:12px; color:var(--ink-3); font-variant-numeric:tabular-nums; line-height:1; margin-top:3px;}
   .counter .mini{display:flex; border-top:1px solid var(--line);}
   .counter .mini button{
     flex:1; border:none; background:none; height:36px; cursor:pointer;
@@ -189,18 +191,15 @@
   .counter .mini button + button{border-left:1px solid var(--line);}
   .counter .mini button:active{background:var(--surface-deep);}
 
-  body.collapsed .counter{width:64px; height:64px; border-radius:50%;}
+  /* 折叠成圆圈：不显示名称，改用「边框颜色＝该计数器的颜色」来区分 */
+  body.collapsed .counter{width:64px; height:64px; border-radius:50%; border:2px solid var(--cc, var(--line));}
   body.collapsed .counter .bar, body.collapsed .counter .mini{display:none;}
   body.collapsed .counter .tap{
     position:absolute; inset:0; display:flex; flex-direction:column;
     align-items:center; justify-content:center; padding:0;
   }
-  body.collapsed .counter .num{font-size:20px;}
-  body.collapsed .counter .tap::after{
-    content:attr(data-name); font-size:9px; color:var(--ink-2);
-    max-width:54px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    margin-top:2px;
-  }
+  body.collapsed .counter .num{font-size:22px; font-weight:600;}
+  body.collapsed .counter .time{font-size:13px; margin-top:2px;}
 
   #empty{
     position:fixed; inset:0; display:flex; flex-direction:column;
@@ -264,16 +263,46 @@
     color:var(--ink-3); font-weight:500;}
 
   /* ── 反馈 / 打赏弹窗 ── */
-  #modal{position:fixed; inset:0; background:rgba(31,26,20,.45); z-index:70;
+  #modal, #ptModal{position:fixed; inset:0; background:rgba(31,26,20,.45); z-index:70;
     display:flex; align-items:center; justify-content:center; padding:20px;}
-  #modal[hidden]{display:none;}
-  #modal .sheet{background:var(--surface); border-radius:4px; padding:28px 24px; max-width:340px; width:100%;
+  #modal[hidden], #ptModal[hidden]{display:none;}
+  #modal .sheet, #ptModal .sheet{background:var(--surface); border-radius:4px; padding:28px 24px; max-width:340px; width:100%;
     text-align:center; position:relative; box-shadow:0 10px 40px rgba(31,26,20,.20);}
-  #modal .mclose{position:absolute; top:6px; right:6px; width:40px; height:40px; border:none;
+  #modal .mclose, #ptModal .mclose{position:absolute; top:6px; right:6px; width:40px; height:40px; border:none;
     background:none; font-size:20px; color:var(--ink-2); cursor:pointer; touch-action:manipulation;}
-  #modal h3{font-size:20px; margin-bottom:16px; color:var(--ink); font-weight:600; font-family:var(--serif); letter-spacing:-0.01em;}
+  #modal h3, #ptModal h3{font-size:20px; margin-bottom:16px; color:var(--ink); font-weight:600; font-family:var(--serif); letter-spacing:-0.01em;}
   #modal img{width:200px; height:200px; object-fit:contain; border:1px solid var(--line); border-radius:2px;}
   #modal p{font-size:15px; color:var(--ink); line-height:1.8; margin-top:14px; font-weight:400; white-space:pre-wrap;}
+  #ptModal .pt-name{width:100%; text-align:center; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink);
+    border:none; border-bottom:1px solid var(--line); background:transparent; padding:6px 4px; margin-bottom:16px;}
+  #ptModal .pt-name:focus{outline:none; border-bottom-color:var(--ink);}
+  #ptModal .note{font-size:13px; color:var(--ink-2); line-height:1.8; margin-bottom:18px; text-align:left;}
+  #ptModal .edit{display:flex; align-items:center; justify-content:center; gap:6px; font-size:16px; color:var(--ink); margin-bottom:20px;}
+  #ptModal .edit input{width:70px; text-align:center; font-size:22px; font-family:var(--serif); color:var(--ink);
+    border:1px solid var(--line); border-radius:2px; padding:8px 6px; background:var(--surface); font-variant-numeric:tabular-nums;}
+  #ptModal .edit input:focus{outline:1.5px solid var(--ink); border-color:var(--ink);}
+  #ptModal .save{width:100%;}
+
+  /* ── 晒成就视图：一屏排版好看的卡片，用户自己截屏分享 ── */
+  #shareView{position:fixed; inset:0; z-index:80; background:var(--surface);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:56px 28px 40px; overflow:auto; text-align:center;}
+  #shareView[hidden]{display:none;}
+  #shareView .sv-hint{position:absolute; top:16px; left:0; right:0; font-size:12px; color:var(--ink-3); letter-spacing:1px;}
+  #shareView .sv-close{position:absolute; top:8px; right:10px; width:40px; height:40px; border:none;
+    background:none; font-size:22px; color:var(--ink-3); cursor:pointer; touch-action:manipulation;}
+  #shareView .sv-card{max-width:400px; width:100%; display:flex; flex-direction:column; align-items:center;}
+  #shareView .sv-motif{font-family:var(--mono); color:#FF8A00; font-size:14px;
+    line-height:1.55; letter-spacing:3px; white-space:pre; margin-bottom:22px;}
+  #shareView .sv-title{width:100%; text-align:center; font-family:var(--serif); font-size:26px; font-weight:600;
+    color:var(--ink); letter-spacing:-0.01em; padding:4px 6px; margin-bottom:28px; word-break:break-word;}
+  #shareView .sv-k{font-size:12px; color:var(--ink-3); letter-spacing:2px; margin-bottom:6px;}
+  #shareView .sv-time{font-family:var(--serif); font-size:52px; font-weight:300; color:var(--ink);
+    font-variant-numeric:tabular-nums; letter-spacing:-0.01em; line-height:1;}
+  #shareView .sv-date{font-size:13px; color:var(--ink-2); margin-top:16px;}
+  #shareView .sv-foot{margin-top:34px; padding-top:18px; border-top:1px solid var(--line); width:100%; max-width:340px;}
+  #shareView .sv-brand{font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink);}
+  #shareView .sv-url{font-size:13px; color:var(--ink-2); letter-spacing:1px; margin-top:2px;}
 
   /* ── 针号换算弹窗 ── */
   #calc{position:fixed; inset:0; background:rgba(31,26,20,.45); z-index:70;
@@ -387,6 +416,7 @@
   <span class="sep"></span>
   <button class="btn" id="addC">＋<span class="t"> 计数器</span></button>
   <button class="btn" id="collapseC">◑<span class="t"> 折叠</span></button>
+  <button class="btn" id="ptBtn" title="本图解累计用时（点击可修改）">⏱<span class="t"> 用时 <span id="ptVal">–</span></span></button>
   <span class="sep"></span>
   <button class="btn" id="awake">☕<span class="t"> 常亮</span></button>
   <span style="flex:1"></span>
@@ -442,6 +472,38 @@
     <h3 id="mTitle"></h3>
     <img id="mImg" alt="二维码">
     <p id="mText"></p>
+  </div>
+</div>
+
+<div id="ptModal" hidden>
+  <div class="sheet">
+    <button class="mclose" aria-label="关闭">×</button>
+    <h3>这份图解累计用时</h3>
+    <input id="ptName" class="pt-name" maxlength="20" placeholder="给这份图解起个名字" aria-label="图解名称">
+    <p class="note">1、自动计时，帮你记住这份图解的编织时长；<br>2、仅页面在前台时计时（关闭后、最小化、锁屏均不计时）；<br>3、名字和用时不对，都可以自己改。</p>
+    <div class="edit">
+      <input id="ptDays" type="number" min="0" inputmode="numeric" aria-label="天"> 天
+      <input id="ptHours" type="number" min="0" inputmode="numeric" aria-label="小时"> 小时
+    </div>
+    <button class="btn primary save" id="ptDone">已完工，生成图片</button>
+  </div>
+</div>
+
+<div id="shareView" hidden>
+  <div class="sv-hint">截屏保存这张图，发小红书 / 朋友圈 ~</div>
+  <button class="sv-close" aria-label="关闭">×</button>
+  <div class="sv-card">
+    <div class="sv-motif">O / O \ O
+| | O / \
+\ O | | O</div>
+    <div class="sv-title" id="svTitle"></div>
+    <div class="sv-k">已织</div>
+    <div class="sv-time" id="svTime">–</div>
+    <div class="sv-date" id="svDate"></div>
+    <div class="sv-foot">
+      <div class="sv-brand">图解伴侣</div>
+      <div class="sv-url">knit.plan4you.uk</div>
+    </div>
   </div>
 </div>
 
@@ -581,6 +643,7 @@ function persistNow(){
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }catch(err){ /* 容量满或被禁用，静默即可，不打扰用户 */ }
+  saveProjLedger();                                  // 整体计时账本单独存，随主进度一起落盘
 }
 function queueSave(){
   clearTimeout(saveTimer);
@@ -647,6 +710,7 @@ $("fileInput").onchange = async e => {
       let cached = true;
       try{ await idbPut({name:f.name, size:f.size, blob:f, kind:"img"}); }catch(_){ cached = false; }
       state.file = {name:f.name, size:f.size};
+      startProject();
       stage.style.display="block";
       await fitWidth();
       queueSave();
@@ -673,6 +737,7 @@ $("fileInput").onchange = async e => {
     state.pageNum = lastPage;
     state.pageCount = state.pdf.numPages;
     state.file = {name:f.name, size:f.size};
+    startProject();
     stage.style.display="block";
     await fitWidth();
     queueSave();
@@ -1005,7 +1070,7 @@ function addCounter(name){
   const i=state.counters.length;
   state.counters.push({
     id:Date.now()+Math.random(), name:name||`计数器${i+1}`, value:0,
-    color:YARN[i%YARN.length],
+    color:YARN[i%YARN.length], accum:0, runningSince:nowIfVisible(),
     x: window.innerWidth-172, y: 66+i*136
   });
   renderCounters();
@@ -1013,8 +1078,10 @@ function addCounter(name){
 function renderCounters(){
   const box=$("floaters"); box.innerHTML="";
   state.counters.forEach(c=>{
+    if(typeof c.accum!=="number"){ c.accum=0; c.runningSince=nowIfVisible(); }   // 老存档兜底
     const el=document.createElement("div");
     el.className="counter";
+    el.style.setProperty("--cc", `var(${c.color})`);   // 折叠成圆圈时用它做边框色，区分不同计数器
     el.innerHTML=`
       <div class="bar">
         <span class="grip">⠿</span>
@@ -1024,10 +1091,12 @@ function renderCounters(){
       </div>
       <button class="tap" data-name="${c.name}" aria-label="加一">
         <span class="num" style="color:var(${c.color})">${c.value}</span>
+        <span class="time">0:00</span>
       </button>
       <div class="mini"><button class="m">−1</button><button class="z">归零</button></div>`;
     box.appendChild(el);
-    const numEl=el.querySelector(".num"), tapEl=el.querySelector(".tap");
+    const numEl=el.querySelector(".num"), tapEl=el.querySelector(".tap"), timeEl=el.querySelector(".time");
+    const resetTimer=()=>{ c.accum=0; c.runningSince=nowIfVisible(); timeEl.textContent=fmtElapsed(0); };
     const place=()=>{
       c.x=clamp(c.x, 0, window.innerWidth - el.offsetWidth);
       c.y=clamp(c.y, 0, window.innerHeight - el.offsetHeight);
@@ -1037,12 +1106,12 @@ function renderCounters(){
 
     const inp=el.querySelector("input"); inp.value=c.name;
     inp.onchange=e=>{ c.name=e.target.value; tapEl.dataset.name=c.name; queueSave(); };
-    el.querySelector(".m").onclick=()=>{ c.value=Math.max(0,c.value-1); numEl.textContent=c.value; queueSave(); };
-    el.querySelector(".z").onclick=()=>{ c.value=0; numEl.textContent=c.value; queueSave(); };
+    el.querySelector(".m").onclick=()=>{ c.value=Math.max(0,c.value-1); numEl.textContent=c.value; resetTimer(); queueSave(); };
+    el.querySelector(".z").onclick=()=>{ c.value=0; numEl.textContent=c.value; resetTimer(); queueSave(); };
     el.querySelector(".x").onclick=()=>{ state.counters=state.counters.filter(x=>x.id!==c.id); renderCounters(); queueSave(); };
 
     let moved=false;
-    tapEl.onclick=()=>{ if(moved){ moved=false; return; } c.value++; numEl.textContent=c.value; queueSave(); };
+    tapEl.onclick=()=>{ if(moved){ moved=false; return; } c.value++; numEl.textContent=c.value; resetTimer(); queueSave(); };
 
     /* 卡片任意位置按下都能拖（输入框和小按钮除外）*/
     el.addEventListener("pointerdown", e=>{
@@ -1064,7 +1133,131 @@ function renderCounters(){
       window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
     });
   });
+  updateTimers();   // 重建后立刻刷一次，避免出现 1 秒空白
 }
+/* ── 计数器计时：显示距上次点击（+1/−1/归零）过了多久，按真实时间续算 ── */
+/* 计时按「累计已运行时间」记：accum=已累计的毫秒，runningSince=当前这段的起点（暂停时为 null）。
+   页面在前台才计时，切走/关闭即暂停，回来继续——所以关闭期间不计时。 */
+function nowIfVisible(){ return document.visibilityState==="hidden" ? null : Date.now(); }
+function elapsedOf(c){ return (c.accum||0) + (c.runningSince ? Date.now()-c.runningSince : 0); }
+function pauseTimers(){                                 // 切走/关闭：把当前这段折进 accum，停表
+  const n=Date.now();
+  state.counters.forEach(c=>{ if(c.runningSince){ c.accum=(c.accum||0)+(n-c.runningSince); c.runningSince=null; } });
+  if(proj.runningSince){ proj.accum=(proj.accum||0)+(n-proj.runningSince); proj.runningSince=null; }
+  saveProjLedger();
+}
+function resumeTimers(){                                // 回到前台：从当前时刻续跑
+  const n=Date.now();
+  state.counters.forEach(c=>{ if(c.runningSince==null) c.runningSince=n; });
+  if(proj.key && proj.runningSince==null) proj.runningSince=n;
+}
+function fmtElapsed(ms){
+  let s=Math.max(0, Math.floor(ms/1000));
+  const h=Math.floor(s/3600); s%=3600;
+  const m=Math.floor(s/60); s%=60;
+  const pad=n=>String(n).padStart(2,"0");
+  return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+function updateTimers(){
+  const els=$("floaters").children;   // 顺序与 state.counters 一致
+  for(let i=0;i<state.counters.length;i++){
+    const t=els[i] && els[i].querySelector(".time");
+    if(t) t.textContent=fmtElapsed(elapsedOf(state.counters[i]));
+  }
+  updateProjLabel();
+}
+setInterval(updateTimers, 1000);
+
+/* ── 整体计时：每个图解一本账，按「文件名|大小」存 localStorage；同样只在前台计时、可手动改 ── */
+const PROJ_KEY = "zhiji-projtime-v1";
+let projLedger = {};
+try{ projLedger = JSON.parse(localStorage.getItem(PROJ_KEY) || "{}") || {}; }catch(_){ projLedger = {}; }
+let proj = { key:null, accum:0, runningSince:null, name:"", start:null };
+function fileKey(){ return state.file ? state.file.name + "|" + state.file.size : null; }
+function fileBase(){ return (((state.file && state.file.name) || "").replace(/\.[^.]+$/,"")) || "我的编织"; }
+function projTotal(){ return (proj.accum||0) + (proj.runningSince ? Date.now()-proj.runningSince : 0); }
+function ledgerEntry(k){                   // 兼容旧格式：旧版账本存的是纯数字（毫秒）
+  const v = projLedger[k];
+  if(typeof v === "number") return {ms:v, start:null, name:null};
+  return (v && typeof v === "object") ? v : null;
+}
+function saveProjLedger(){
+  if(proj.key) projLedger[proj.key] = { ms: projTotal(), start: proj.start, name: proj.name };
+  try{ localStorage.setItem(PROJ_KEY, JSON.stringify(projLedger)); }catch(_){}
+}
+function startProject(){                 // 打开某图解时调用：存好上一份、切到这份的账本
+  saveProjLedger();
+  const k = fileKey();
+  const e = k ? ledgerEntry(k) : null;
+  proj.key = k;
+  proj.accum = (e && typeof e.ms === "number") ? e.ms : 0;
+  proj.start = (e && e.start) ? e.start : Date.now();   // 首次打开这份图解即记为「开始日」
+  proj.name  = (e && e.name)  ? e.name  : fileBase();
+  proj.runningSince = nowIfVisible();
+  updateProjLabel();
+}
+function fmtProj(ms){                     // 项目总时长按 天/小时 显示；不满 1 小时才显示分钟
+  const min = Math.max(0, Math.floor(ms/60000));
+  if(min < 60) return `${min}分钟`;
+  const hoursTotal = Math.floor(min/60);
+  const d = Math.floor(hoursTotal/24), h = hoursTotal%24;
+  return d>0 ? `${d}天${h}小时` : `${h}小时`;
+}
+function fmtDateRange(startTs, endTs){    // 开始日 – 结束日；同一天只显示一天
+  const s=new Date(startTs), e=new Date(endTs);
+  const sameDay = s.getFullYear()===e.getFullYear() && s.getMonth()===e.getMonth() && s.getDate()===e.getDate();
+  const sStr = `${s.getFullYear()}年${s.getMonth()+1}月${s.getDate()}日`;
+  if(sameDay) return sStr;
+  const eStr = (s.getFullYear()===e.getFullYear())
+    ? `${e.getMonth()+1}月${e.getDate()}日`
+    : `${e.getFullYear()}年${e.getMonth()+1}月${e.getDate()}日`;
+  return `${sStr} – ${eStr}`;
+}
+function updateProjLabel(){
+  const el = $("ptVal"); if(!el) return;
+  el.textContent = proj.key ? fmtProj(projTotal()) : "–";
+}
+let ptOrig = {d:0, h:0};
+$("ptBtn").onclick=()=>{
+  if(!proj.key){ toast("先打开一份图解再计时"); return; }
+  const totalH = Math.floor(projTotal()/3600000);
+  const d = Math.floor(totalH/24), h = totalH%24;
+  $("ptDays").value = d; $("ptHours").value = h;
+  $("ptName").value = proj.name || "";
+  ptOrig = {d, h};
+  $("ptModal").hidden=false;
+};
+function commitPt(){                       // 关闭/完工时提交：名字 + 用时（用时改了才覆盖）
+  const nm = $("ptName").value.trim();
+  if(nm) proj.name = nm;
+  const d = Math.max(0, parseInt($("ptDays").value,10)||0);
+  const h = Math.max(0, parseInt($("ptHours").value,10)||0);
+  if(!(d===ptOrig.d && h===ptOrig.h)){     // 只有真改了天/小时才覆盖，避免抹掉当前不足1小时的分钟
+    proj.accum = (d*24 + h)*3600000;
+    proj.runningSince = nowIfVisible();
+  }
+  saveProjLedger();
+  updateProjLabel();
+}
+$("ptDone").onclick=()=>{                    // 已完工：提交名字/用时 → 自动生成可截图的成就卡
+  commitPt();
+  $("ptModal").hidden=true;
+  openShareView();
+};
+$("ptModal").addEventListener("click", e=>{
+  if(e.target.id==="ptModal" || e.target.classList.contains("mclose")){ commitPt(); $("ptModal").hidden=true; }
+});
+
+/* ── 晒成就卡：把当前项目数据填进一屏卡片，用户自己截屏分享（名字在用时页改，卡片只展示）── */
+function openShareView(){
+  if(!proj.key){ toast("先打开一份图解再晒成就"); return; }
+  $("svTitle").textContent = proj.name || fileBase();
+  $("svTime").textContent = fmtProj(projTotal());
+  $("svDate").textContent = fmtDateRange(proj.start || Date.now(), Date.now());
+  $("shareView").hidden = false;
+}
+$("shareView").querySelector(".sv-close").onclick = ()=>{ $("shareView").hidden = true; };
+
 $("addC").onclick=()=>{ addCounter(); queueSave(); };
 $("collapseC").onclick=()=>{
   document.body.classList.toggle("collapsed");
@@ -1088,13 +1281,23 @@ async function setAwake(on){
 }
 $("awake").onclick=()=>setAwake(!wantAwake);
 document.addEventListener("visibilitychange", ()=>{
-  if(document.visibilityState==="visible" && wantAwake && !wakeLock) setAwake(true);
-  if(document.visibilityState==="hidden") persistNow();      // 切走前立刻同步一次，避免被回收
+  if(document.visibilityState==="visible"){
+    resumeTimers();                                          // 回到前台，计时继续
+    if(wantAwake && !wakeLock) setAwake(true);
+  }
+  if(document.visibilityState==="hidden"){
+    pauseTimers();                                           // 切走/关闭，计时暂停
+    persistNow();                                            // 立刻把暂停后的进度存下，避免被回收
+  }
 });
 
 /* ── 启动：恢复标记进度；默认计数器只在首次访问（无存档）时创建，否则每次刷新都会重复添加 ── */
 const hadSave = restoreFromStorage();
-if(hadSave) renderCounters();
+if(hadSave){
+  // 打开页面时丢弃上次会话残留的运行起点，从已累计值当前时刻续跑（关闭期间不计入）
+  state.counters.forEach(c=>{ if(typeof c.accum!=="number") c.accum=0; c.runningSince=nowIfVisible(); });
+  renderCounters();
+}
 else { addCounter("行数"); addCounter("花样重复"); }
 
 /* ── 启动：从 IndexedDB 恢复上次的 PDF；没有缓存但上次在看示例，则恢复示例 ── */
@@ -1113,6 +1316,7 @@ else { addCounter("行数"); addCounter("花样重复"); }
         state.pdf = null; state.demo = false;
         state.pageCount = 1; state.pageNum = 1;
         state.file = {name:rec.name, size:rec.size};
+        startProject();
         stage.style.display="block";
         await (hadSave ? render() : fitWidth());
         toast(`已恢复上次的图片${rec.name ? "：" + rec.name : ""}`);
@@ -1122,6 +1326,7 @@ else { addCounter("行数"); addCounter("花样重复"); }
         state.pageCount = state.pdf.numPages;
         state.pageNum = clamp(typeof state.pageNum === "number" ? state.pageNum : 1, 1, state.pageCount);
         state.file = {name:rec.name, size:rec.size};
+        startProject();
         stage.style.display="block";
         await (hadSave ? render() : fitWidth());
         toast(`已恢复上次的图解${rec.name ? "：" + rec.name : ""}`);
