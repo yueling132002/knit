@@ -240,6 +240,41 @@
   }
   #toast.show{opacity:1;}
 
+  /* 多页 PDF 时在图解【上下各留】一条空白带，专门给浮动翻页按钮站——
+     按钮绝不能压在图解上（2026-07-26 用户反馈"会遮挡住文字"）。
+     上面那条高度随工具条是否显示而变，由 updateFlipBtns() 写 --flip-pad-top。 */
+  body.multipage #viewer{
+    padding-top:var(--flip-pad-top, 96px);
+    padding-bottom:96px;
+  }
+
+  /* 浮动翻页按钮：滑动永不翻页，只有点它才翻。
+     ⚠️ 翻页只能靠这两个浮动按钮，不能放工具条——用户织东西时菜单是隐藏的，
+        每次翻页都要先点开工具条太麻烦（2026-07-26 用户反馈）。
+     ⚠️ 也不能做成左右两侧的常驻按钮：图解按屏宽铺满、左右没有空白，会压住图解，
+        且会盖住横标尺 44px 的拖动热区、和框选高亮贴互相误触（2026-07-26 评估后否决）。
+     横向居中（用户 2026-07-26 指定）。 */
+  .flipbtn{
+    position:fixed; left:50%; z-index:55;
+    display:inline-flex; align-items:center; gap:8px;
+    min-height:46px; padding:0 24px;
+    background:rgba(31,26,20,.86); color:#fff;
+    border:none; border-radius:999px; cursor:pointer;
+    font-family:inherit; font-size:14px; font-weight:400; letter-spacing:.04em;
+    white-space:nowrap; touch-action:manipulation;
+    box-shadow:0 4px 18px rgba(31,26,20,.26);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+    opacity:0; pointer-events:none;                /* 没到边界时不可见、也点不到 */
+    transform:translateX(-50%) translateY(6px);
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .flipbtn.show{opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0);}
+  .flipbtn:active{background:rgba(31,26,20,.96);}
+  #flipNext{bottom:22px;}
+  #flipPrev{top:22px;}      /* 工具条显示时 JS 会把它压到工具条下面，见 updateFlipBtns() */
+  /* 按钮改成居中后会和同样居中的 #toast 重叠，多页 PDF 时把提示条抬到按钮上方 */
+  body.multipage #toast{bottom:82px;}
+
   /* ── 推荐工具下拉菜单 ── */
   #toolsMenu{
     position:fixed; z-index:50; display:none;
@@ -281,7 +316,9 @@
   #ptModal .edit input{width:70px; text-align:center; font-size:22px; font-family:var(--serif); color:var(--ink);
     border:1px solid var(--line); border-radius:2px; padding:8px 6px; background:var(--surface); font-variant-numeric:tabular-nums;}
   #ptModal .edit input:focus{outline:1.5px solid var(--ink); border-color:var(--ink);}
-  #ptModal .save{width:100%;}
+
+  #ptModal .save{width:100%; justify-content:center;}
+  #ptModal .pt-lab{font-size:12px; color:var(--ink-3); letter-spacing:1.5px; margin-bottom:8px;}
 
   /* ── 晒成就视图：一屏排版好看的卡片，用户自己截屏分享 ── */
   #shareView{position:fixed; inset:0; z-index:80; background:var(--surface);
@@ -416,7 +453,7 @@
   <span class="sep"></span>
   <button class="btn" id="addC">＋<span class="t"> 计数器</span></button>
   <button class="btn" id="collapseC">◑<span class="t"> 折叠</span></button>
-  <button class="btn" id="ptBtn" title="本图解累计用时（点击可修改）">⏱<span class="t"> 用时 <span id="ptVal">–</span></span></button>
+  <button class="btn" id="ptBtn" title="本图解累计用时、改名，以及生成完工成就卡">⏱<span class="t"> 计时与分享</span></button>
   <span class="sep"></span>
   <button class="btn" id="awake">☕<span class="t"> 常亮</span></button>
   <span style="flex:1"></span>
@@ -453,6 +490,8 @@
   <div class="lh" id="loadHint"></div>
 </div>
 <div id="toast"></div>
+<button class="flipbtn" id="flipPrev">‹ 上一页</button>
+<button class="flipbtn" id="flipNext">下一页 ›</button>
 
 <!-- 推荐工具下拉菜单：以后加友情链接在这里加 <a> 即可 -->
 <div id="toolsMenu">
@@ -478,14 +517,17 @@
 <div id="ptModal" hidden>
   <div class="sheet">
     <button class="mclose" aria-label="关闭">×</button>
-    <h3>这份图解累计用时</h3>
-    <input id="ptName" class="pt-name" maxlength="20" placeholder="给这份图解起个名字" aria-label="图解名称">
-    <p class="note">1、自动计时，帮你记住这份图解的编织时长；<br>2、仅页面在前台时计时（关闭后、最小化、锁屏均不计时）；<br>3、名字和用时不对，都可以自己改。</p>
+    <h3>计时与分享</h3>
+    <div class="pt-lab">这份图解名为</div>
+    <input id="ptName" class="pt-name" maxlength="20" placeholder="给它起个名字" aria-label="图解名称">
+    <div class="pt-lab">累计用时</div>
     <div class="edit">
       <input id="ptDays" type="number" min="0" inputmode="numeric" aria-label="天"> 天
       <input id="ptHours" type="number" min="0" inputmode="numeric" aria-label="小时"> 小时
     </div>
-    <button class="btn primary save" id="ptDone">已完工，生成图片</button>
+    <p class="note">1、自动计时，帮你记住这份图解的编织时长；<br>2、仅页面在前台时计时（关闭后、最小化、锁屏均不计时）；<br>3、名字和用时不对，都可以自己改。</p>
+    <button class="btn primary save" id="ptShare">正在编织，分享给织友</button>
+    <button class="btn save" id="ptDone" style="margin-top:8px;">已完工，生成图片</button>
   </div>
 </div>
 
@@ -497,7 +539,7 @@
 | | O / \
 \ O | | O</div>
     <div class="sv-title" id="svTitle"></div>
-    <div class="sv-k">已织</div>
+    <div class="sv-k" id="svK">已织</div>
     <div class="sv-time" id="svTime">–</div>
     <div class="sv-date" id="svDate"></div>
     <div class="sv-foot">
@@ -583,6 +625,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "pdf.worker.min.js";
 const $ = id => document.getElementById(id);
 const canvas = $("pdfCanvas"), ctx = canvas.getContext("2d");
 const stage = $("stage"), viewer = $("viewer"), hlLayer = $("hlLayer");
+const flipPrevBtn = $("flipPrev"), flipNextBtn = $("flipNext");
 const clamp = (v,a,b) => Math.min(Math.max(v,a),b);
 
 const state = {
@@ -800,7 +843,7 @@ async function render(){
   baseW=vp.width; baseH=vp.height; renderedScale=state.scale;
   afterRender();
 }
-function afterRender(){ placeRulers(); renderHls(); }
+function afterRender(){ placeRulers(); renderHls(); updateFlipBtns(); }
 
 $("zIn").onclick  = () => { if(needDoc())return; state.scale=clamp(state.scale*1.15,.3,5); render(); queueSave(); };
 $("zOut").onclick = () => { if(needDoc())return; state.scale=clamp(state.scale/1.15,.3,5); render(); queueSave(); };
@@ -811,35 +854,57 @@ $("rotBtn").onclick = () => {
   toast(`已旋转 ${state.rotation}°`);
 };
 
-/* ── PDF 连续下滑：滑到底再下滑翻下一页；滑到顶再上滑回上一页（仅多页 PDF）── */
+/* ── PDF 翻页：滑动只滚动、永不翻页；到顶/到底浮出按钮，点它才翻（2026-07-26 定案）──
+   ⚠️ 不要再改回「滑动翻页」，这一轮为它失败了两次，根因是死结：
+   「想再多看一点」和「想翻页」是同一个动作、同一个方向、差不多的距离，程序手里只有
+   「滑了多远」这个数字，无法区分两者 —— 门槛调小就误翻、调大就翻不动。
+   · 第 1 次试「到边界后松手再滑才翻」→ 触控板/手指惯性让程序以为还是同一次滑动，
+     结果变成"要等惯性停下（约等于提示消失）才能翻"，用户反馈违反使用习惯；
+   · 第 2 次试「从碰到边界那一刻起再滑 80px 才翻」→ 用户正常看图解的滑动本来就常
+     超过 80px，照旧误翻。
+   结论：翻页必须是和滚动**不一样的动作**。现在只有点按钮才翻，误翻率为零。       */
 let flipLock=false;
-const canFlip  = () => state.pdf && state.pageCount>1 && !flipLock;
 const atBottom = () => viewer.scrollTop + viewer.clientHeight >= viewer.scrollHeight - 2;
 const atTop    = () => viewer.scrollTop <= 2;
+
+/* 浮动翻页按钮：滑到顶露「上一页」、滑到底露「下一页」，其余时候不占屏幕。
+   ⚠️ 翻页不能依赖工具条：用户织东西时是隐藏菜单状态，每次翻页都要先点开工具条太麻烦。
+   两个按钮都站在 body.multipage 给 #viewer 留出的上下空白带里，不压图解内容。 */
+let padTopCache = null;
+function updateFlipBtns(){
+  const multi = !!(state.pdf && state.pageCount > 1);
+  document.body.classList.toggle("multipage", multi);   // 多页 PDF 才留上下空白带
+  flipPrevBtn.classList.toggle("show", multi && atTop()    && state.pageNum > 1);
+  flipNextBtn.classList.toggle("show", multi && atBottom() && state.pageNum < state.pageCount);
+
+  /* 工具条显示时会盖住顶部，所以「上一页」按钮要压到工具条下面，
+     顶部空白带也要相应加高，保证按钮始终落在空白里、不压图解。
+     只在数值真的变了才写，免得每次滚动都触发重排。 */
+  const tb = $("topbar"), hidden = tb.classList.contains("hidden");
+  const btnTop = hidden ? 22 : tb.offsetHeight + 12;
+  const padTop = btnTop + 74;
+  flipPrevBtn.style.top = btnTop + "px";
+  if(padTop !== padTopCache){
+    padTopCache = padTop;
+    document.documentElement.style.setProperty("--flip-pad-top", padTop + "px");
+  }
+}
+viewer.addEventListener("scroll", updateFlipBtns, {passive:true});
+
 function flipTo(next){
+  if(flipLock) return;
   if(next ? state.pageNum>=state.pageCount : state.pageNum<=1) return;
   flipLock=true;
   state.pageNum += next ? 1 : -1; state.selHl=null;
   Promise.resolve(render()).then(()=>{
     viewer.scrollTop = next ? 0 : viewer.scrollHeight;   // 下一页停顶部、上一页停底部，衔接顺畅
+    updateFlipBtns();
     setTimeout(()=>{ flipLock=false; }, 350);
   });
-  queueSave();
-  toast(`第 ${state.pageNum} / ${state.pageCount} 页`);
+  queueSave();   // 不弹底部页码提示：顶部工具条的 #pageInfo 已同步，且会和「下一页」按钮重合
 }
-viewer.addEventListener("wheel", e=>{                      // 桌面滚轮
-  if(!canFlip()) return;
-  if(e.deltaY>0 && atBottom()) flipTo(true);
-  else if(e.deltaY<0 && atTop()) flipTo(false);
-}, {passive:true});
-let touchY=null;                                          // 触屏：越过边界继续滑
-viewer.addEventListener("touchstart", e=>{ touchY = e.touches.length===1 ? e.touches[0].clientY : null; }, {passive:true});
-viewer.addEventListener("touchmove", e=>{
-  if(touchY===null || e.touches.length!==1 || !canFlip()) return;
-  const dy = e.touches[0].clientY - touchY;               // 手指上移 dy<0＝想往下看
-  if(dy<-60 && atBottom()){ flipTo(true); touchY=null; }
-  else if(dy>60 && atTop()){ flipTo(false); touchY=null; }
-}, {passive:true});
+flipNextBtn.onclick = () => flipTo(true);
+flipPrevBtn.onclick = () => flipTo(false);
 
 /* ── 双指缩放（自己实现，避免 iPad 把工具条一起放大）── */
 const pts = new Map();
@@ -1203,6 +1268,10 @@ function fmtProj(ms){                     // 项目总时长按 天/小时 显�
   const d = Math.floor(hoursTotal/24), h = hoursTotal%24;
   return d>0 ? `${d}天${h}小时` : `${h}小时`;
 }
+function fmtDay(ts){                      // 单个日期：2026年7月10日
+  const d = new Date(ts);
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+}
 function fmtDateRange(startTs, endTs){    // 开始日 – 结束日；同一天只显示一天
   const s=new Date(startTs), e=new Date(endTs);
   const sameDay = s.getFullYear()===e.getFullYear() && s.getMonth()===e.getMonth() && s.getDate()===e.getDate();
@@ -1213,6 +1282,9 @@ function fmtDateRange(startTs, endTs){    // 开始日 – 结束日；同一天
     : `${e.getFullYear()}年${e.getMonth()+1}月${e.getDate()}日`;
   return `${sStr} – ${eStr}`;
 }
+/* 2026-07-26：按钮文字改成「计时与分享」后，工具条上不再显示时长，#ptVal 已删。
+   本函数因此成为空转（有 !el 保护，不会报错）。若想恢复工具条上的时长显示，
+   把 ptBtn 里的 <span id="ptVal">–</span> 放回去即可，这里不用改。            */
 function updateProjLabel(){
   const el = $("ptVal"); if(!el) return;
   el.textContent = proj.key ? fmtProj(projTotal()) : "–";
@@ -1239,21 +1311,24 @@ function commitPt(){                       // 关闭/完工时提交：名字 + 
   saveProjLedger();
   updateProjLabel();
 }
-$("ptDone").onclick=()=>{                    // 已完工：提交名字/用时 → 自动生成可截图的成就卡
-  commitPt();
-  $("ptModal").hidden=true;
-  openShareView();
-};
+/* 两个按钮都是「提交名字/用时 → 生成可截图的卡片」，只差卡片上的措辞：
+   ptShare = 还在织（织到一半也能晒，引流用）；ptDone = 已完工（收官纪念）。 */
+$("ptShare").onclick=()=>{ commitPt(); $("ptModal").hidden=true; openShareView(false); };
+$("ptDone").onclick =()=>{ commitPt(); $("ptModal").hidden=true; openShareView(true);  };
 $("ptModal").addEventListener("click", e=>{
   if(e.target.id==="ptModal" || e.target.classList.contains("mclose")){ commitPt(); $("ptModal").hidden=true; }
 });
 
-/* ── 晒成就卡：把当前项目数据填进一屏卡片，用户自己截屏分享（名字在用时页改，卡片只展示）── */
-function openShareView(){
+/* ── 晒成就卡：把当前项目数据填进一屏卡片，用户自己截屏分享（名字在计时页改，卡片只展示）──
+   done=true 已完工版：显示开始–完工的时间段；done=false 正在编织版：只显示开始日 */
+function openShareView(done){
   if(!proj.key){ toast("先打开一份图解再晒成就"); return; }
+  const start = proj.start || Date.now();
   $("svTitle").textContent = proj.name || fileBase();
+  $("svK").textContent   = done ? "已完工 · 共织" : "正在编织 · 已织";
   $("svTime").textContent = fmtProj(projTotal());
-  $("svDate").textContent = fmtDateRange(proj.start || Date.now(), Date.now());
+  $("svDate").textContent = done ? fmtDateRange(start, Date.now())
+                                 : `${fmtDay(start)} 开始，还在继续`;
   $("shareView").hidden = false;
 }
 $("shareView").querySelector(".sv-close").onclick = ()=>{ $("shareView").hidden = true; };
@@ -1571,8 +1646,8 @@ document.querySelectorAll("#tab-gauge .yarn-in").forEach(y=>{
 });
 
 /* ── 专注模式 ── */
-$("focusBtn").onclick=()=>{ $("topbar").classList.add("hidden"); document.body.classList.add("focus"); };
-$("peek").onclick=()=>{ $("topbar").classList.remove("hidden"); document.body.classList.remove("focus"); };
+$("focusBtn").onclick=()=>{ $("topbar").classList.add("hidden"); document.body.classList.add("focus"); updateFlipBtns(); };
+$("peek").onclick=()=>{ $("topbar").classList.remove("hidden"); document.body.classList.remove("focus"); updateFlipBtns(); };
 
 /* 手机屏幕（≤640px）自动进入专注模式，避免工具条占满3行 */
 if(window.innerWidth <= 640){
