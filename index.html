@@ -298,14 +298,14 @@
     color:var(--ink-3); font-weight:500;}
 
   /* ── 反馈 / 打赏弹窗 ── */
-  #modal, #ptModal{position:fixed; inset:0; background:rgba(31,26,20,.45); z-index:70;
+  #modal, #ptModal, #syncModal{position:fixed; inset:0; background:rgba(31,26,20,.45); z-index:70;
     display:flex; align-items:center; justify-content:center; padding:20px;}
-  #modal[hidden], #ptModal[hidden]{display:none;}
-  #modal .sheet, #ptModal .sheet{background:var(--surface); border-radius:4px; padding:28px 24px; max-width:340px; width:100%;
+  #modal[hidden], #ptModal[hidden], #syncModal[hidden]{display:none;}
+  #modal .sheet, #ptModal .sheet, #syncModal .sheet{background:var(--surface); border-radius:4px; padding:28px 24px; max-width:340px; width:100%;
     text-align:center; position:relative; box-shadow:0 10px 40px rgba(31,26,20,.20);}
-  #modal .mclose, #ptModal .mclose{position:absolute; top:6px; right:6px; width:40px; height:40px; border:none;
+  #modal .mclose, #ptModal .mclose, #syncModal .mclose{position:absolute; top:6px; right:6px; width:40px; height:40px; border:none;
     background:none; font-size:20px; color:var(--ink-2); cursor:pointer; touch-action:manipulation;}
-  #modal h3, #ptModal h3{font-size:20px; margin-bottom:16px; color:var(--ink); font-weight:600; font-family:var(--serif); letter-spacing:-0.01em;}
+  #modal h3, #ptModal h3, #syncModal h3{font-size:20px; margin-bottom:16px; color:var(--ink); font-weight:600; font-family:var(--serif); letter-spacing:-0.01em;}
   #modal img{width:200px; height:200px; object-fit:contain; border:1px solid var(--line); border-radius:2px;}
   #modal p{font-size:15px; color:var(--ink); line-height:1.8; margin-top:14px; font-weight:400; white-space:pre-wrap;}
   #ptModal .pt-name{width:100%; text-align:center; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink);
@@ -317,6 +317,25 @@
     border:1px solid var(--line); border-radius:2px; padding:8px 6px; background:var(--surface); font-variant-numeric:tabular-nums;}
   #ptModal .edit input:focus{outline:1.5px solid var(--ink); border-color:var(--ink);}
 
+  /* ── 跨设备同步弹窗 ── */
+  #syncModal .sheet{text-align:left; max-width:400px;}
+  #syncModal .note{font-size:13px; color:var(--ink-2); line-height:1.8; margin-bottom:16px;}
+  #syncModal .row{display:flex; gap:8px; flex-wrap:wrap;}
+  #syncModal .row .btn{flex:1; min-width:132px; justify-content:center;}
+  #syncModal textarea{
+    width:100%; height:88px; margin-top:12px; padding:8px;
+    font-family:var(--mono); font-size:11px; line-height:1.5; word-break:break-all;
+    color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:2px;
+    resize:vertical;
+    /* body 上关了长按菜单，这里必须还回来，否则 iPad 上长按不出「粘贴 / 全选」 */
+    -webkit-touch-callout:default; -webkit-user-select:text; user-select:text;
+  }
+  #syncModal textarea:focus{outline:1.5px solid var(--ink); border-color:var(--ink);}
+  #syncModal .wide{width:100%; justify-content:center; margin-top:8px;}
+  #syncModal .fb{margin-top:10px; font-size:13px; line-height:1.7; min-height:20px;}
+  #syncModal .fb.ok{color:#5B7A52;}
+  #syncModal .fb.err{color:#A8493A;}
+  #syncModal .fb.info{color:var(--ink-2);}
   #ptModal .save{width:100%; justify-content:center;}
   #ptModal .pt-lab{font-size:12px; color:var(--ink-3); letter-spacing:1.5px; margin-bottom:8px;}
 
@@ -457,6 +476,7 @@
   <span class="sep"></span>
   <button class="btn" id="awake">☕<span class="t"> 常亮</span></button>
   <span style="flex:1"></span>
+  <button class="btn" id="syncBtn" title="跨设备同步用时和计数器">🔄<span class="t"> 同步</span></button>
   <button class="btn" id="calcBtn" title="针号&amp;密度换算">🧮<span class="t"> 针号&amp;密度换算</span></button>
   <button class="btn" id="toolsBtn">🔗<span class="t"> 推荐工具</span></button>
   <button class="btn" id="fbBtn">🍾<span class="t"> 许愿瓶</span></button>
@@ -528,6 +548,27 @@
     <p class="note">1、自动计时，帮你记住这份图解的编织时长；<br>2、仅页面在前台时计时（关闭后、最小化、锁屏均不计时）；<br>3、名字和用时不对，都可以自己改。</p>
     <button class="btn primary save" id="ptShare">正在编织，分享给织友</button>
     <button class="btn save" id="ptDone" style="margin-top:8px;">已完工，生成图片</button>
+  </div>
+</div>
+
+<div id="syncModal" hidden>
+  <div class="sheet">
+    <button class="mclose" aria-label="关闭">×</button>
+    <h3>跨设备同步</h3>
+    <p class="note">
+      换设备时用。在这台设备点「生成口令」→ 复制 → 到另一台设备粘贴导入。<br>
+      只搬<b>用时</b>和<b>计数器</b>，<b>不搬图解文件</b>——另一台设备要自己打开同一份图解。
+    </p>
+    <div class="row">
+      <button class="btn primary" id="syncGen">📤 生成口令</button>
+      <button class="btn" id="syncShowImp">📥 导入口令</button>
+    </div>
+    <textarea id="syncOut" hidden readonly placeholder="口令会显示在这里…"></textarea>
+    <div id="syncImpArea" hidden>
+      <textarea id="syncIn" placeholder="把另一台设备生成的口令粘贴到这里…"></textarea>
+      <button class="btn primary wide" id="syncDoImp">✅ 确认导入（会覆盖本机数据）</button>
+    </div>
+    <div class="fb" id="syncFb"></div>
   </div>
 </div>
 
@@ -646,6 +687,10 @@ function toast(msg){
 
 /* ── 本地保存：标记/计数/位置存 localStorage；PDF 文件太大，存 IndexedDB ── */
 const STORAGE_KEY = "zhiji-v1";
+/* 导入同步口令期间置为 true：从写入到刷新这段时间里禁止一切回写。
+   否则 location.reload() 触发的 visibilitychange:hidden 会调 persistNow/saveProjLedger，
+   把内存里的旧数据盖回刚导入的新数据上（改这块务必留着这个开关）。 */
+let importing = false;
 const IDB_NAME = "zhiji-files", IDB_STORE = "files", IDB_KEY = "current";
 function idbOpen(){
   return new Promise((res,rej)=>{
@@ -669,6 +714,7 @@ const idbGet = ()  => idbTx("readonly",  s=>s.get(IDB_KEY));
 const idbDel = ()  => idbTx("readwrite", s=>s.delete(IDB_KEY));
 let saveTimer = null;
 function persistNow(){
+  if(importing) return;                              // 正在导入口令，别回写
   try{
     const data = {
       rulerH: state.rulerH,
@@ -1247,6 +1293,7 @@ function ledgerEntry(k){                   // 兼容旧格式：旧版账本存�
   return (v && typeof v === "object") ? v : null;
 }
 function saveProjLedger(){
+  if(importing) return;                              // 正在导入口令，别回写
   if(proj.key) projLedger[proj.key] = { ms: projTotal(), start: proj.start, name: proj.name };
   try{ localStorage.setItem(PROJ_KEY, JSON.stringify(projLedger)); }catch(_){}
 }
@@ -1439,6 +1486,83 @@ function openModal(k){
 }
 $("fbBtn").onclick=()=>openModal("fb");
 $("tipBtn").onclick=()=>openModal("tip");
+
+/* ── 跨设备同步：把「用时账本 + 计数器」打包成一串口令，手动搬到另一台设备（2026-07-26）──
+   为什么是手动口令、不是自动同步：自动同步必须有服务器，本产品是纯静态 + 0 成本。
+   同一套做法在用户的 my-word 项目里已经实测可用，这里照这个路子做。
+   图解文件本身在 IndexedDB 里，体积大且用户明确说不用同步，不打包。
+   冲突策略：用户 2026-07-26 拍板【全覆盖】，不做合并（导入方数据被完全替换）。 */
+const SYNC_TAG = "tujie-banlv-sync";
+function syncFb(msg, kind){
+  const el = $("syncFb"); el.textContent = msg; el.className = "fb " + (kind || "info");
+}
+$("syncBtn").onclick = () => {                       // 每次打开都回到初始状态，不留上次的痕迹
+  $("syncOut").hidden = true; $("syncOut").value = "";
+  $("syncImpArea").hidden = true; $("syncIn").value = "";
+  syncFb("", "info");
+  $("syncModal").hidden = false;
+};
+$("syncModal").onclick = e => {
+  if(e.target.id === "syncModal" || e.target.classList.contains("mclose")) $("syncModal").hidden = true;
+};
+
+$("syncGen").onclick = () => {
+  saveProjLedger();                                  // 先把当前这份图解的用时落进账本，免得少算
+  const payload = {
+    tag: SYNC_TAG, v: 1, t: Date.now(),
+    file: state.file || null,                        // 仅用于导入时提示两边图解对不对得上
+    /* 计数器导出成「停表快照」：把正在跑的那段折进 accum、runningSince 清空。
+       否则另一台设备几小时后导入，「距上次点击」会显示成一个荒谬的大数字。 */
+    counters: (state.counters || []).map(c => ({ ...c, accum: elapsedOf(c), runningSince: null })),
+    ledger: projLedger
+  };
+  let code;
+  try{ code = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))); }
+  catch(err){ syncFb("生成失败：" + err.message, "err"); return; }
+  const out = $("syncOut"); out.hidden = false; out.value = code;
+  out.focus(); out.select();                         // 先帮用户全选好，自动复制失败也能手动复制
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code)
+      .then(() => syncFb("口令已生成并复制好了，去另一台设备粘贴导入。", "ok"))
+      /* 非 HTTPS（比如局域网 http 本地测试）浏览器不给用剪贴板，降级成手动复制 */
+      .catch(() => syncFb("口令已生成，并已帮你全选。请手动复制（本地测试时无法自动复制，上线后正常）。", "info"));
+  }else{
+    syncFb("口令已生成，并已帮你全选，请手动复制。", "info");
+  }
+};
+
+$("syncShowImp").onclick = () => { $("syncImpArea").hidden = false; $("syncIn").focus(); };
+
+$("syncDoImp").onclick = () => {
+  const raw = $("syncIn").value.trim();
+  if(!raw){ syncFb("请先把口令粘贴进来。", "err"); return; }
+  let d;
+  try{ d = JSON.parse(decodeURIComponent(escape(atob(raw)))); }
+  catch(_){ syncFb("口令读不出来，可能复制时缺了一截。请重新生成，并确保整段完整复制。", "err"); return; }
+  if(!d || d.tag !== SYNC_TAG){ syncFb("这不是图解伴侣的同步口令。", "err"); return; }
+
+  const from = (d.file && d.file.name) ? `《${d.file.name}》` : "（口令里没记图解名）";
+  const here = (state.file && state.file.name) ? `《${state.file.name}》` : "（本机还没打开图解）";
+  let msg = `确认导入？\n\n口令来自：${from}\n本机当前：${here}\n\n`
+          + `本机的用时账本和计数器会被【完全覆盖】，覆盖后无法撤销。`;
+  if(d.file && state.file && d.file.name !== state.file.name)
+    msg += `\n\n⚠️ 两边图解名字不一样，导入后计数器会套用到本机这份图解上。`;
+  if(!confirm(msg)) return;
+
+  importing = true;                                  // 从这里起禁止回写，直到刷新
+  try{
+    localStorage.setItem(PROJ_KEY, JSON.stringify(d.ledger || {}));   // 用时账本：全覆盖
+    /* 计数器：只替换 zhiji-v1 里的 counters 字段，标尺/高亮贴/页码/缩放保持本机原样 */
+    let prog = {};
+    try{ prog = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") || {}; }catch(_){ prog = {}; }
+    prog.counters = Array.isArray(d.counters) ? d.counters : [];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prog));
+  }catch(err){
+    importing = false; syncFb("写入失败（可能存储空间满了）：" + err.message, "err"); return;
+  }
+  syncFb("导入成功，正在重新加载…", "ok");
+  setTimeout(() => location.reload(), 800);          // 刷新最稳：所有内存状态都按新数据重建
+};
 
 /* ── 推荐工具菜单 ── */
 const toolsMenu=$("toolsMenu");
