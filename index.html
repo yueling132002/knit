@@ -457,7 +457,7 @@
 
 <div id="topbar">
   <button class="btn primary" id="openBtn">📄 <span class="t">打开图解</span></button>
-  <input type="file" id="fileInput" accept="application/pdf,image/*" hidden>
+  <input type="file" id="fileInput" accept="application/pdf,image/*" multiple hidden>
   <span class="sep"></span>
   <span id="pageInfo">– / –</span>
   <span class="sep"></span>
@@ -670,7 +670,7 @@ const flipPrevBtn = $("flipPrev"), flipNextBtn = $("flipNext");
 const clamp = (v,a,b) => Math.min(Math.max(v,a),b);
 
 const state = {
-  pdf:null, img:null, pageNum:1, pageCount:0, scale:1, demo:false, file:null,
+  pdf:null, img:null, imgs:null, pageNum:1, pageCount:0, scale:1, demo:false, file:null,
   rulerH:{on:false, r:.3}, rulerV:{on:false, r:.5},
   rulerHSize:15, rulerVSize:15,   /* 标尺色带可见宽度（px），可拖动调节 */
   rotation:0,                      /* 图解旋转角度：0/90/180/270 */
@@ -782,8 +782,54 @@ function loadImageFromBlob(blob){
     img.src = URL.createObjectURL(blob);
   });
 }
+function releaseImgs(){                 // 换图解时释放批量图的 blob URL，避免内存积压
+  if(!state.imgs) return;
+  state.imgs.forEach(im=>{ if(im && im.src && im.src.startsWith("blob:")) URL.revokeObjectURL(im.src); });
+  state.imgs = null;
+}
 $("fileInput").onchange = async e => {
-  const f = e.target.files[0]; if(!f) return;
+  const files = Array.from(e.target.files || []); if(!files.length) return;
+  e.target.value = "";   // 立即清空选择：重选同一批文件也会再次触发 change，避免「点了没反应」（2026-08-13 实测踩坑）
+
+  /* 超过 2 张：整批拒绝，指路「图片合成 PDF」（2026-08-13 定案：批量上限 2 张，更多走 PDF 管线） */
+  if(files.length > 2){
+    alert("一次最多 2 张图片；更多张图解建议先合成 PDF 再打开（iPad 快捷指令或图片转 PDF 工具），翻页、标尺、高亮都能用。");
+    return;
+  }
+
+  /* 2 张图片：合成一份「多页图解」，复用 PDF 的多页翻页（其余行为与单图一致） */
+  if(files.length === 2){
+    if(!files.every(f => isImageFile(f) && !/\.pdf$/i.test(f.name) && f.type !== "application/pdf")){
+      alert("批量导入只支持图片。");
+      return;
+    }
+    const total = files[0].size + files[1].size;
+    const mb = total / 1048576;
+    $("empty").style.display="none";
+    $("loading").classList.add("show");
+    $("loadText").textContent = `正在加载图片 · ${mb.toFixed(1)} MB`;
+    $("loadHint").textContent = mb > 20 ? "图片较大，可能稍慢一些 ⏳" : "";
+    try{
+      const imgs = [];
+      for(const f of files) imgs.push(await loadImageFromBlob(f));
+      releaseImgs();
+      state.imgs = imgs; state.img = null; state.pdf = null; state.demo = false;
+      state.pageCount = 2; state.pageNum = 1;
+      let cached = true;
+      try{ await idbPut({name:files[0].name, size:total, blobs:files, kind:"imgs"}); }catch(_){ cached = false; }
+      state.file = {name:files[0].name, size:total};   // 账本键 = 第一张名|总大小，重开同一批自动续计
+      startProject();
+      stage.style.display="block";
+      await fitWidth();
+      queueSave();
+      toast(cached ? "图片已加载，刷新后会自动恢复" : "图片已加载（此浏览器无法缓存，刷新后需重新打开）");
+    }catch(err){ alert("图片无法打开，请换一张（iPad 拍的 HEIC 一般可以，安卓/电脑浏览器可能不支持 HEIC，可先转成 JPG）。"); $("empty").style.display=""; stage.style.display="none"; }
+    finally{ $("loading").classList.remove("show"); }
+    return;
+  }
+
+  /* 单文件：原有逻辑，不改 */
+  const f = files[0];
   const mb = f.size / 1048576;
   const asImage = isImageFile(f) && !/\.pdf$/i.test(f.name) && f.type !== "application/pdf";
   $("empty").style.display="none";
@@ -794,6 +840,7 @@ $("fileInput").onchange = async e => {
     $("loadHint").textContent = mb > 20 ? "图片较大，可能稍慢一些 ⏳" : "";
     try{
       const img = await loadImageFromBlob(f);
+      releaseImgs();
       state.img = img; state.pdf = null; state.demo = false;
       state.pageCount = 1; state.pageNum = 1;
       let cached = true;
@@ -815,6 +862,7 @@ $("fileInput").onchange = async e => {
   try{
     const buf = await f.arrayBuffer();
     state.pdf = await pdfjsLib.getDocument({data: buf}).promise;
+    releaseImgs();
     state.demo=false; state.img=null;
     /* 把文件本身缓存进 IndexedDB，刷新后自动恢复 */
     let cached = true;
@@ -838,8 +886,9 @@ $("fileInput").onchange = async e => {
 async function fitWidth(){
   const rot = state.rotation || 0;
   const swap = rot===90 || rot===270;
-  if(state.img){
-    const eff = swap ? state.img.naturalHeight : state.img.naturalWidth;
+  if(state.img || state.imgs){
+    const img = state.imgs ? state.imgs[state.pageNum-1] : state.img;
+    const eff = swap ? img.naturalHeight : img.naturalWidth;
     state.scale = (viewer.clientWidth-16) / eff; render(); return;
   }
   if(state.demo){ state.scale=Math.max(.8,(viewer.clientWidth-16)/760); render(); return; }
@@ -850,7 +899,7 @@ async function fitWidth(){
 }
 
 function renderImage(){
-  const img = state.img; if(!img) return;
+  const img = state.imgs ? state.imgs[state.pageNum-1] : state.img; if(!img) return;
   const rot = state.rotation || 0;
   const swap = rot===90 || rot===270;
   const iw = img.naturalWidth, ih = img.naturalHeight;
@@ -871,12 +920,12 @@ function renderImage(){
     ctx.drawImage(img, -iw*state.scale/2, -ih*state.scale/2, iw*state.scale, ih*state.scale);
     ctx.restore();
   }
-  $("pageInfo").textContent = "图片";
+  $("pageInfo").textContent = state.imgs ? `${state.pageNum} / ${state.pageCount}` : "图片";
   baseW=dw; baseH=dh; renderedScale=state.scale;
 }
 
 async function render(){
-  if(state.img){ renderImage(); afterRender(); return; }
+  if(state.img || state.imgs){ renderImage(); afterRender(); return; }
   if(state.demo){ renderDemo(); afterRender(); return; }
   if(!state.pdf) return;
   const page = await state.pdf.getPage(state.pageNum);
@@ -918,8 +967,8 @@ const atTop    = () => viewer.scrollTop <= 2;
    两个按钮都站在 body.multipage 给 #viewer 留出的上下空白带里，不压图解内容。 */
 let padTopCache = null;
 function updateFlipBtns(){
-  const multi = !!(state.pdf && state.pageCount > 1);
-  document.body.classList.toggle("multipage", multi);   // 多页 PDF 才留上下空白带
+  const multi = !!((state.pdf || state.imgs) && state.pageCount > 1);
+  document.body.classList.toggle("multipage", multi);   // 多页 PDF 或双图批量才留上下空白带
   flipPrevBtn.classList.toggle("show", multi && atTop()    && state.pageNum > 1);
   flipNextBtn.classList.toggle("show", multi && atBottom() && state.pageNum < state.pageCount);
 
@@ -982,6 +1031,7 @@ viewer.addEventListener("pointercancel", ptEnd);
 
 /* ── 示例图解 ── */
 $("demoBtn").onclick = () => {
+  releaseImgs();
   state.demo=true; state.pdf=null; state.img=null; state.pageCount=1; state.pageNum=1;
   $("pageInfo").textContent="示例";
   $("empty").style.display="none"; stage.style.display="block";
@@ -1427,13 +1477,24 @@ else { addCounter("行数"); addCounter("花样重复"); }
   try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(_){}
   let rec = null;
   try{ rec = await idbGet(); }catch(_){}
-  if(rec && rec.blob){
+  if(rec && (rec.blob || rec.blobs)){
     $("loadText").textContent = "正在恢复上次的图解…";
     $("loadHint").textContent = rec.name || "";
     $("loading").classList.add("show");
     $("empty").style.display="none";
     try{
-      if(rec.kind === "img"){
+      if(rec.kind === "imgs" && Array.isArray(rec.blobs) && rec.blobs.length){
+        const imgs = [];
+        for(const b of rec.blobs) imgs.push(await loadImageFromBlob(b));
+        state.imgs = imgs; state.pdf = null; state.img = null; state.demo = false;
+        state.pageCount = imgs.length;
+        state.pageNum = clamp(typeof state.pageNum === "number" ? state.pageNum : 1, 1, state.pageCount);
+        state.file = {name:rec.name, size:rec.size};
+        startProject();
+        stage.style.display="block";
+        await (hadSave ? render() : fitWidth());
+        toast(`已恢复上次的图片${rec.name ? "：" + rec.name : ""}`);
+      } else if(rec.kind === "img"){
         state.img = await loadImageFromBlob(rec.blob);
         state.pdf = null; state.demo = false;
         state.pageCount = 1; state.pageNum = 1;
