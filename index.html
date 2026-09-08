@@ -133,6 +133,8 @@
   #hlLayer.drawing{cursor:crosshair; z-index:7; touch-action:none;}
   .hl{position:absolute; border-radius:2px; touch-action:none; cursor:grab;}
   .hl.sel{box-shadow:0 0 0 1.5px var(--ink);}
+  #hlLayer.drawing .hl{pointer-events:none; cursor:crosshair;}
+  #hlLayer.drawing .hl .x, #hlLayer.drawing .hl .rs{display:none;}
   .hl .x, .hl .rs{display:none; touch-action:manipulation;}
   .hl.sel .x, .hl.sel .rs{display:flex;}
   .hl .x{
@@ -184,7 +186,7 @@
   .counter .time{font-size:12px; color:var(--ink-3); font-variant-numeric:tabular-nums; line-height:1; margin-top:3px;}
   .counter .mini{display:flex; border-top:1px solid var(--line);}
   .counter .mini button{
-    flex:1; border:none; background:none; height:36px; cursor:pointer;
+    flex:1; border:none; background:none; height:44px; cursor:pointer;
     font-size:12px; color:var(--ink-2); font-family:inherit; touch-action:manipulation;
     font-weight:400;
   }
@@ -200,6 +202,7 @@
   }
   body.collapsed .counter .num{font-size:22px; font-weight:600;}
   body.collapsed .counter .time{font-size:13px; margin-top:2px;}
+  body.hide-counter-time .counter .time{display:none;}
 
   #empty{
     position:fixed; inset:0; display:flex; flex-direction:column;
@@ -298,14 +301,14 @@
     color:var(--ink-3); font-weight:500;}
 
   /* ── 反馈 / 打赏弹窗 ── */
-  #modal, #ptModal, #syncModal{position:fixed; inset:0; background:rgba(31,26,20,.45); z-index:70;
+  #modal, #ptModal, #syncModal, #counterEditModal, #settingsModal{position:fixed; inset:0; background:rgba(31,26,20,.45); z-index:70;
     display:flex; align-items:center; justify-content:center; padding:20px;}
-  #modal[hidden], #ptModal[hidden], #syncModal[hidden]{display:none;}
-  #modal .sheet, #ptModal .sheet, #syncModal .sheet{background:var(--surface); border-radius:4px; padding:28px 24px; max-width:340px; width:100%;
+  #modal[hidden], #ptModal[hidden], #syncModal[hidden], #counterEditModal[hidden], #settingsModal[hidden]{display:none;}
+  #modal .sheet, #ptModal .sheet, #syncModal .sheet, #counterEditModal .sheet, #settingsModal .sheet{background:var(--surface); border-radius:4px; padding:28px 24px; max-width:340px; width:100%;
     text-align:center; position:relative; box-shadow:0 10px 40px rgba(31,26,20,.20);}
-  #modal .mclose, #ptModal .mclose, #syncModal .mclose{position:absolute; top:6px; right:6px; width:40px; height:40px; border:none;
+  #modal .mclose, #ptModal .mclose, #syncModal .mclose, #counterEditModal .mclose, #settingsModal .mclose{position:absolute; top:6px; right:6px; width:40px; height:40px; border:none;
     background:none; font-size:20px; color:var(--ink-2); cursor:pointer; touch-action:manipulation;}
-  #modal h3, #ptModal h3, #syncModal h3{font-size:20px; margin-bottom:16px; color:var(--ink); font-weight:600; font-family:var(--serif); letter-spacing:-0.01em;}
+  #modal h3, #ptModal h3, #syncModal h3, #counterEditModal h3, #settingsModal h3{font-size:20px; margin-bottom:16px; color:var(--ink); font-weight:600; font-family:var(--serif); letter-spacing:-0.01em;}
   #modal img{width:200px; height:200px; object-fit:contain; border:1px solid var(--line); border-radius:2px;}
   #modal p{font-size:15px; color:var(--ink); line-height:1.8; margin-top:14px; font-weight:400; white-space:pre-wrap;}
   #ptModal .pt-name{width:100%; text-align:center; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink);
@@ -338,6 +341,17 @@
   #syncModal .fb.info{color:var(--ink-2);}
   #ptModal .save{width:100%; justify-content:center;}
   #ptModal .pt-lab{font-size:12px; color:var(--ink-3); letter-spacing:1.5px; margin-bottom:8px;}
+  #settingsModal .settings-note{font-size:13px; color:var(--ink-2); line-height:1.8; margin:0 0 16px; text-align:left;}
+  #settingsModal .settings-option{display:flex; align-items:flex-start; gap:10px; min-height:44px; padding:8px 0; text-align:left; color:var(--ink); cursor:pointer; touch-action:manipulation;}
+  #settingsModal .settings-option input{width:20px; height:20px; flex:none; margin:1px 0 0; accent-color:var(--ink);}
+  #settingsModal .settings-option .toggle-copy{font-size:14px; line-height:1.5;}
+  #settingsModal .settings-option small{display:block; color:var(--ink-2); font-size:12px; line-height:1.6; margin-top:2px;}
+  #counterEditModal .counter-edit-label{font-size:13px; color:var(--ink-2); margin-bottom:8px;}
+  #counterEditModal .counter-edit-input{width:100%; box-sizing:border-box; text-align:center; font-size:22px; font-family:var(--serif); color:var(--ink); border:1px solid var(--line); border-radius:2px; padding:8px 6px; background:var(--surface); font-variant-numeric:tabular-nums;}
+  #counterEditModal .counter-edit-input:focus{outline:1.5px solid var(--ink); border-color:var(--ink);}
+  #counterEditModal .counter-edit-error{min-height:20px; margin-top:7px; color:#A8493A; font-size:12px; line-height:1.5;}
+  #counterEditModal .counter-edit-actions{display:flex; gap:8px; margin-top:12px;}
+  #counterEditModal .counter-edit-actions .btn{height:44px; flex:1; justify-content:center;}
 
   /* ── 晒成就视图：一屏排版好看的卡片，用户自己截屏分享 ── */
   #shareView{position:fixed; inset:0; z-index:80; background:var(--surface);
@@ -468,13 +482,13 @@
   <button class="btn" id="rH">─<span class="t"> 横标尺</span></button>
   <button class="btn" id="rV">│<span class="t"> 纵标尺</span></button>
   <span class="sep"></span>
-  <button class="btn" id="hlY"><span class="hl-dot" style="background:#FF8A00"></span><span class="t">高亮贴</span></button>
+  <button class="btn" id="hlY" aria-pressed="false"><span class="hl-dot" style="background:#FF8A00"></span><span class="t">高亮贴</span></button>
   <span class="sep"></span>
   <button class="btn" id="addC">＋<span class="t"> 计数器</span></button>
   <button class="btn" id="collapseC">◑<span class="t"> 折叠</span></button>
   <button class="btn" id="ptBtn" title="本图解累计用时、改名，以及生成完工成就卡">⏱<span class="t"> 计时与分享</span></button>
+  <button class="btn" id="settingsBtn">⚙<span class="t"> 其他设置</span></button>
   <span class="sep"></span>
-  <button class="btn" id="awake">☕<span class="t"> 常亮</span></button>
   <span style="flex:1"></span>
   <button class="btn" id="syncBtn" title="跨设备同步用时和计数器">🔄<span class="t"> 同步</span></button>
   <button class="btn" id="calcBtn" title="针号&amp;密度换算">🧮<span class="t"> 针号&amp;密度换算</span></button>
@@ -548,6 +562,36 @@
     <p class="note">1、自动计时，帮你记住这份图解的编织时长；<br>2、仅页面在前台时计时（关闭后、最小化、锁屏均不计时）；<br>3、名字和用时不对，都可以自己改。</p>
     <button class="btn primary save" id="ptShare">正在编织，分享给织友</button>
     <button class="btn save" id="ptDone" style="margin-top:8px;">已完工，生成图片</button>
+  </div>
+</div>
+
+<div id="settingsModal" hidden role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="sheet">
+    <button class="mclose" aria-label="关闭">×</button>
+    <h3 id="settingsTitle">其他设置</h3>
+    <p class="settings-note">这里放不属于图解累计用时和分享的通用显示设置。</p>
+    <label class="settings-option" for="closeCounterTime">
+      <input id="closeCounterTime" type="checkbox">
+      <span class="toggle-copy">关闭计数器计时<small>只隐藏计数器下方的时间，不影响图解累计用时、分享卡或同步。</small></span>
+    </label>
+    <label class="settings-option" for="keepAwake">
+      <input id="keepAwake" type="checkbox">
+      <span class="toggle-copy">保持屏幕常亮<small>仅在浏览器支持时生效，离开页面后会按系统规则处理。</small></span>
+    </label>
+  </div>
+</div>
+
+<div id="counterEditModal" hidden role="dialog" aria-modal="true" aria-labelledby="counterEditTitle">
+  <div class="sheet">
+    <button class="mclose" aria-label="取消">×</button>
+    <h3 id="counterEditTitle">修改行数</h3>
+    <div class="counter-edit-label">输入当前行数</div>
+    <input id="counterEditValue" class="counter-edit-input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" aria-label="当前行数">
+    <div id="counterEditError" class="counter-edit-error" role="alert"></div>
+    <div class="counter-edit-actions">
+      <button class="btn" id="counterEditCancel">取消</button>
+      <button class="btn primary" id="counterEditConfirm">确定</button>
+    </div>
   </div>
 </div>
 
@@ -676,6 +720,17 @@ const state = {
   rotation:0,                      /* 图解旋转角度：0/90/180/270 */
   pageHl:{}, drawColor:null, selHl:null, counters:[]
 };
+const COUNTER_TIME_KEY = "zhiji-show-counter-time-v1";
+let showCounterTime = true;
+try{ showCounterTime = localStorage.getItem(COUNTER_TIME_KEY) !== "0"; }catch(_){ showCounterTime = true; }
+function applyCounterTimeVisibility(){
+  document.body.classList.toggle("hide-counter-time", !showCounterTime);
+}
+function saveCounterTimePreference(){
+  try{ localStorage.setItem(COUNTER_TIME_KEY, showCounterTime ? "1" : "0"); }
+  catch(_){ toast("这个设置暂时无法保存"); }
+}
+applyCounterTimeVisibility();
 const YARN = ["--yarn-1","--yarn-2","--yarn-3","--yarn-4","--yarn-5"];
 const HL = {y:["var(--hl-butter)","var(--hl-butter-b)"], p:["var(--hl-clay)","var(--hl-clay-b)"], g:["var(--hl-sage)","var(--hl-sage-b)"]};
 let renderedScale = 1, baseW = 0, baseH = 0;
@@ -764,6 +819,7 @@ function clearAllStorage(){
   state.rulerH = {on:false, r:.3}; state.rulerV = {on:false, r:.5};
   state.rulerHSize = 15; state.rulerVSize = 15; state.rotation = 0;
   state.pageHl = {}; state.counters = []; state.file = null;
+  setHighlightDrawing(false);
   document.body.classList.remove("collapsed");
   $("collapseC")?.classList.remove("on");
   placeRulers(); renderHls();
@@ -803,6 +859,7 @@ $("fileInput").onchange = async e => {
       alert("批量导入只支持图片。");
       return;
     }
+    setHighlightDrawing(false);
     const total = files[0].size + files[1].size;
     const mb = total / 1048576;
     $("empty").style.display="none";
@@ -832,6 +889,7 @@ $("fileInput").onchange = async e => {
   const f = files[0];
   const mb = f.size / 1048576;
   const asImage = isImageFile(f) && !/\.pdf$/i.test(f.name) && f.type !== "application/pdf";
+  setHighlightDrawing(false);
   $("empty").style.display="none";
   $("loading").classList.add("show");
 
@@ -1031,6 +1089,7 @@ viewer.addEventListener("pointercancel", ptEnd);
 
 /* ── 示例图解 ── */
 $("demoBtn").onclick = () => {
+  setHighlightDrawing(false);
   releaseImgs();
   state.demo=true; state.pdf=null; state.img=null; state.pageCount=1; state.pageNum=1;
   $("pageInfo").textContent="示例";
@@ -1147,13 +1206,25 @@ dragRulerSize($("rulerH"), "y", "rulerHSize");
 dragRulerSize($("rulerV"), "x", "rulerVSize");
 
 /* ── 高亮便签贴 ── */
+let activeHighlightGesture = null;
+function cancelHighlightGesture(){
+  if(activeHighlightGesture) activeHighlightGesture.cancel();
+}
+function setHighlightDrawing(enabled){
+  if(!enabled) cancelHighlightGesture();
+  state.drawColor = enabled ? "y" : null;
+  state.selHl = null;
+  const on = !!state.drawColor;
+  $("hlY").classList.toggle("on", on);
+  $("hlY").setAttribute("aria-pressed", String(on));
+  hlLayer.classList.toggle("drawing", on);
+  renderHls();
+}
 $("hlY").onclick=()=>{
   if(needDoc())return;
-  state.drawColor = state.drawColor ? null : "y";
-  $("hlY").classList.toggle("on", !!state.drawColor);
-  hlLayer.classList.toggle("drawing", !!state.drawColor);
-  if(state.drawColor) toast("在图上框出要标记的区域");
-  queueSave();
+  const on = !state.drawColor;
+  setHighlightDrawing(on);
+  if(on) toast("可连续框选，再点高亮贴退出");
 };
 function curHls(){
   const key = state.demo ? "demo" : state.pageNum;
@@ -1163,24 +1234,60 @@ function curHls(){
 hlLayer.addEventListener("pointerdown", e=>{
   if(!state.drawColor){ state.selHl=null; renderHls(); return; }
   e.stopPropagation();
+  if(activeHighlightGesture && activeHighlightGesture.pointerId !== e.pointerId){
+    cancelHighlightGesture();
+    return;
+  }
   const rect=canvas.getBoundingClientRect();
+  if(!rect.width || !rect.height) return;
+  const pointerId=e.pointerId;
   const sx=(e.clientX-rect.left)/rect.width, sy=(e.clientY-rect.top)/rect.height;
+  const list=curHls();
   const hl={x:sx,y:sy,w:0,h:0,color:state.drawColor};
-  curHls().push(hl);
+  list.push(hl);
+  let finished=false;
+  const cleanup=()=>{
+    window.removeEventListener("pointermove",move);
+    window.removeEventListener("pointerup",up);
+    window.removeEventListener("pointercancel",cancel);
+    if(activeHighlightGesture && activeHighlightGesture.pointerId===pointerId) activeHighlightGesture=null;
+  };
+  const removeDraft=()=>{
+    const i=list.indexOf(hl);
+    if(i>=0) list.splice(i,1);
+  };
+  const cancel=()=>{
+    if(finished) return;
+    finished=true;
+    cleanup();
+    removeDraft();
+    state.selHl=null;
+    renderHls();
+  };
   const move=ev=>{
+    if(finished || ev.pointerId!==pointerId) return;
     hl.w=Math.max(0,(ev.clientX-rect.left)/rect.width-sx);
     hl.h=Math.max(0,(ev.clientY-rect.top)/rect.height-sy);
     renderHls();
   };
-  const up=()=>{
-    window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
-    if(hl.w<0.005||hl.h<0.004) curHls().pop(); else state.selHl=hl;
-    state.drawColor=null; $("hlY").classList.remove("on");
-    hlLayer.classList.remove("drawing");
+  const up=ev=>{
+    if(finished || ev.pointerId!==pointerId) return;
+    finished=true;
+    cleanup();
+    if(hl.w<0.005 || hl.h<0.004){
+      removeDraft();
+      state.selHl=null;
+    }else{
+      state.selHl=hl;
+    }
     renderHls();
     queueSave();
   };
-  window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
+  activeHighlightGesture={pointerId, cancel};
+  try{ hlLayer.setPointerCapture(pointerId); }catch(_){}
+  window.addEventListener("pointermove",move);
+  window.addEventListener("pointerup",up);
+  window.addEventListener("pointercancel",cancel);
 });
 function renderHls(){
   hlLayer.innerHTML="";
@@ -1227,16 +1334,74 @@ function renderHls(){
 }
 
 /* ── 漂浮计数器：整卡可拖，8px 阈值区分「拖动」与「点击 +1」── */
+let activeCounterGesture = null;
+function cancelActiveCounterGesture(){
+  if(activeCounterGesture) activeCounterGesture.cancel();
+}
 function addCounter(name){
   const i=state.counters.length;
   state.counters.push({
     id:Date.now()+Math.random(), name:name||`计数器${i+1}`, value:0,
     color:YARN[i%YARN.length], accum:0, runningSince:nowIfVisible(),
-    x: window.innerWidth-172, y: 66+i*136
+    x: window.innerWidth-172, y: 66+i*146
   });
   renderCounters();
 }
+function parseCounterValue(raw){
+  const text=String(raw ?? "").trim();
+  if(!/^\d+$/.test(text)) return null;
+  const value=Number(text);
+  return Number.isSafeInteger(value) ? value : null;
+}
+let counterEditId = null;
+function closeCounterEditor(){
+  $("counterEditModal").hidden=true;
+  counterEditId=null;
+  $("counterEditError").textContent="";
+}
+function openCounterEditor(id){
+  const c=state.counters.find(x=>x.id===id);
+  if(!c) return;
+  counterEditId=id;
+  $("counterEditValue").value=String(c.value);
+  $("counterEditError").textContent="";
+  $("counterEditModal").hidden=false;
+  requestAnimationFrame(()=>{
+    const input=$("counterEditValue");
+    input.focus(); input.select();
+  });
+}
+function commitCounterEditor(){
+  const value=parseCounterValue($("counterEditValue").value);
+  if(value===null){
+    $("counterEditError").textContent="请输入有效的非负整数";
+    $("counterEditValue").focus();
+    return;
+  }
+  const c=state.counters.find(x=>x.id===counterEditId);
+  if(!c){ closeCounterEditor(); return; }
+  if(c.value!==value){
+    c.value=value;
+    c.accum=0;
+    c.runningSince=nowIfVisible();
+    closeCounterEditor();
+    renderCounters();
+    queueSave();
+  }else{
+    closeCounterEditor();
+  }
+}
+$("counterEditConfirm").onclick=commitCounterEditor;
+$("counterEditCancel").onclick=closeCounterEditor;
+$("counterEditModal").addEventListener("click", e=>{
+  if(e.target.id==="counterEditModal" || e.target.classList.contains("mclose")) closeCounterEditor();
+});
+$("counterEditModal").addEventListener("keydown", e=>{
+  if(e.key==="Escape"){ e.preventDefault(); closeCounterEditor(); }
+  if(e.key==="Enter" && e.target.id==="counterEditValue"){ e.preventDefault(); commitCounterEditor(); }
+});
 function renderCounters(){
+  cancelActiveCounterGesture();
   const box=$("floaters"); box.innerHTML="";
   state.counters.forEach(c=>{
     if(typeof c.accum!=="number"){ c.accum=0; c.runningSince=nowIfVisible(); }   // 老存档兜底
@@ -1254,7 +1419,7 @@ function renderCounters(){
         <span class="num" style="color:var(${c.color})">${c.value}</span>
         <span class="time">0:00</span>
       </button>
-      <div class="mini"><button class="m">−1</button><button class="z">归零</button></div>`;
+      <div class="mini"><button class="m">−1</button><button class="edit">改</button><button class="z">归零</button></div>`;
     box.appendChild(el);
     const numEl=el.querySelector(".num"), tapEl=el.querySelector(".tap"), timeEl=el.querySelector(".time");
     const resetTimer=()=>{ c.accum=0; c.runningSince=nowIfVisible(); timeEl.textContent=fmtElapsed(0); };
@@ -1266,32 +1431,67 @@ function renderCounters(){
     place();
 
     const inp=el.querySelector("input"); inp.value=c.name;
-    inp.onchange=e=>{ c.name=e.target.value; tapEl.dataset.name=c.name; queueSave(); };
+    const counterLabel=()=>`${c.name}，轻点加一；点「改」修改数值`;
+    inp.onchange=e=>{ c.name=e.target.value; tapEl.dataset.name=c.name; tapEl.setAttribute("aria-label", counterLabel()); queueSave(); };
     el.querySelector(".m").onclick=()=>{ c.value=Math.max(0,c.value-1); numEl.textContent=c.value; resetTimer(); queueSave(); };
+    el.querySelector(".edit").onclick=()=>openCounterEditor(c.id);
     el.querySelector(".z").onclick=()=>{ c.value=0; numEl.textContent=c.value; resetTimer(); queueSave(); };
     el.querySelector(".x").onclick=()=>{ state.counters=state.counters.filter(x=>x.id!==c.id); renderCounters(); queueSave(); };
 
+    tapEl.title="轻点加一，点「改」可直接修改数值";
+    tapEl.setAttribute("aria-label", counterLabel());
     let moved=false;
-    tapEl.onclick=()=>{ if(moved){ moved=false; return; } c.value++; numEl.textContent=c.value; resetTimer(); queueSave(); };
+    tapEl.onclick=()=>{
+      if(moved){ moved=false; return; }
+      c.value++; numEl.textContent=c.value; resetTimer(); queueSave();
+    };
 
-    /* 卡片任意位置按下都能拖（输入框和小按钮除外）*/
+    /* 卡片任意位置按下都能拖（输入框和小按钮除外） */
     el.addEventListener("pointerdown", e=>{
-      if(e.target.closest("input, .x, .m, .z")) return;
+      if(e.target.closest("input, .x, .m, .edit, .z")) return;
+      if(e.pointerType==="mouse" && e.button!==0) return;
+      if(activeCounterGesture && activeCounterGesture.pointerId!==e.pointerId){
+        cancelActiveCounterGesture();
+        return;
+      }
       e.stopPropagation();
-      const sx=e.clientX, sy=e.clientY, bx=c.x, by=c.y; moved=false;
+      const pointerId=e.pointerId;
+      const sx=e.clientX, sy=e.clientY, bx=c.x, by=c.y;
+      let finished=false;
+      moved=false;
+      const cleanup=()=>{
+        window.removeEventListener("pointermove",move);
+        window.removeEventListener("pointerup",up);
+        window.removeEventListener("pointercancel",cancel);
+        if(activeCounterGesture && activeCounterGesture.pointerId===pointerId) activeCounterGesture=null;
+      };
+      const cancel=()=>{
+        if(finished) return;
+        finished=true;
+        cleanup();
+        el.classList.remove("dragging");
+        moved=false;
+      };
       const move=ev=>{
+        if(finished || ev.pointerId!==pointerId) return;
         const dx=ev.clientX-sx, dy=ev.clientY-sy;
-        if(!moved && Math.hypot(dx,dy) < 8) return;    // 8px 阈值：小于它算点击
+        if(!moved && Math.hypot(dx,dy)<8) return;    // 8px 阈值：小于它算点击
         if(!moved) el.classList.add("dragging");
         moved=true;
         c.x=bx+dx; c.y=by+dy; place();
       };
-      const up=()=>{
-        window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
+      const up=ev=>{
+        if(finished || ev.pointerId!==pointerId) return;
+        finished=true;
+        cleanup();
         el.classList.remove("dragging");
         if(moved) queueSave();
       };
-      window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
+      const gesture={pointerId, cancel};
+      activeCounterGesture=gesture;
+      window.addEventListener("pointermove",move);
+      window.addEventListener("pointerup",up);
+      window.addEventListener("pointercancel",cancel);
     });
   });
   updateTimers();   // 重建后立刻刷一次，避免出现 1 秒空白
@@ -1396,6 +1596,25 @@ $("ptBtn").onclick=()=>{
   ptOrig = {d, h};
   $("ptModal").hidden=false;
 };
+$("settingsBtn").onclick=()=>{
+  $("closeCounterTime").checked = !showCounterTime;
+  $("keepAwake").checked = wantAwake;
+  $("settingsModal").hidden=false;
+};
+$("closeCounterTime").addEventListener("change", e=>{
+  showCounterTime = !e.target.checked;
+  applyCounterTimeVisibility();
+  renderCounters();
+  saveCounterTimePreference();
+  queueSave();
+});
+$("keepAwake").addEventListener("change", e=>setAwake(!!e.target.checked));
+$("settingsModal").addEventListener("click", e=>{
+  if(e.target.id==="settingsModal" || e.target.classList.contains("mclose")) $("settingsModal").hidden=true;
+});
+$("settingsModal").addEventListener("keydown", e=>{
+  if(e.key==="Escape"){ e.preventDefault(); $("settingsModal").hidden=true; }
+});
 function commitPt(){                       // 关闭/完工时提交：名字 + 用时（用时改了才覆盖）
   const nm = $("ptName").value.trim();
   if(nm) proj.name = nm;
@@ -1440,24 +1659,29 @@ $("collapseC").onclick=()=>{
 
 /* ── 屏幕常亮（iPadOS 16.4+ 支持）── */
 let wakeLock=null, wantAwake=false;
+function syncAwakeSetting(){
+  const el=$("keepAwake");
+  if(el) el.checked=wantAwake;
+}
 async function setAwake(on){
   wantAwake=on;
+  syncAwakeSetting();
   try{
     if(on){
-      if(!("wakeLock" in navigator)){ toast("此浏览器不支持屏幕常亮"); wantAwake=false; return; }
+      if(!("wakeLock" in navigator)){ toast("此浏览器不支持屏幕常亮"); wantAwake=false; syncAwakeSetting(); return; }
       wakeLock = await navigator.wakeLock.request("screen");
       toast("屏幕常亮已开启");
     } else if(wakeLock){ await wakeLock.release(); wakeLock=null; toast("屏幕常亮已关闭"); }
   }catch(err){ toast("无法开启常亮：" + err.name); wantAwake=false; }
-  $("awake").classList.toggle("on", wantAwake);
+  syncAwakeSetting();
 }
-$("awake").onclick=()=>setAwake(!wantAwake);
 document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState==="visible"){
     resumeTimers();                                          // 回到前台，计时继续
     if(wantAwake && !wakeLock) setAwake(true);
   }
   if(document.visibilityState==="hidden"){
+    cancelActiveCounterGesture();                         // 切走时取消未完成的拖动
     pauseTimers();                                           // 切走/关闭，计时暂停
     persistNow();                                            // 立刻把暂停后的进度存下，避免被回收
   }
