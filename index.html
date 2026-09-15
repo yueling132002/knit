@@ -91,7 +91,17 @@
   .btn.on:hover{background:#000;}
   .btn[hidden]{display:none;}          /* .btn 的 display 会盖过 [hidden]，这里补回来 */
   .sep{width:1px; height:20px; background:var(--line); margin:0 2px;}
-  #pageInfo{font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums; min-width:52px; text-align:center; font-weight:400;}
+  #pageInfo{font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums; min-width:52px; text-align:center; font-weight:400;
+    display:inline-flex; align-items:center; justify-content:center; gap:2px;}
+  /* 页码输入：当前页可直接改，回车/失焦跳转；总页数继续以 " / N" 展示 */
+  #pageInput{
+    width:2.6em; height:32px; text-align:center; font-size:13px; font-family:inherit;
+    color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:2px;
+    font-variant-numeric:tabular-nums; padding:0 2px; touch-action:manipulation;
+  }
+  #pageInput:focus{outline:1.5px solid var(--ink); border-color:var(--ink);}
+  .ruler-icon{width:18px; height:18px; display:block; overflow:visible;}
+  .ruler-icon path{fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round;}
   .hl-dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
 
   #peek{
@@ -149,6 +159,90 @@
     cursor:nwse-resize; align-items:center; justify-content:center;
     color:var(--ink); font-size:11px; box-shadow:0 1px 4px rgba(31,26,20,.10);
   }
+
+  /* ── 跨页悬浮便签：独立于 PDF 页面和按页高亮层 ── */
+  #noteLayer{position:fixed; inset:0; z-index:25; pointer-events:none;}
+  .note-card{
+    position:absolute; min-width:224px; min-height:140px;
+    max-width:calc(100vw - 16px); max-height:calc(100vh - 16px);
+    border:1px solid var(--warm); border-radius:4px; background:transparent;
+    box-shadow:0 5px 22px rgba(31,26,20,.16); overflow:visible;
+    pointer-events:auto; touch-action:auto; user-select:none;
+  }
+  .note-surface{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    background:rgba(255,248,220,.96); opacity:var(--note-opacity,.92);
+    overflow:hidden; border-radius:4px; z-index:6;
+  }
+  .note-dragbar{
+    position:relative; z-index:6;
+    height:44px; flex:none; cursor:grab; touch-action:none;
+    background:transparent;
+  }
+  .note-dragbar:active{cursor:grabbing;}
+  .note-content{
+    flex:1; min-height:0; overflow:auto; padding:10px 12px 10px;
+    color:var(--ink); font-size:15px; line-height:1.65; word-break:break-word;
+    -webkit-user-select:text; user-select:text; touch-action:auto; cursor:text;
+    outline:none;
+  }
+  .note-card.editing .note-content{padding-top:10px; padding-bottom:10px;}
+  .note-content b,.note-content strong{font-weight:700;}
+  .note-content i,.note-content em{font-style:italic;}
+  .note-content img{display:block; max-width:100%; height:auto; margin:6px 0; border-radius:2px;}
+  /* X 删除按钮 — 右上角，编辑工具与它共用同一排 */
+  .note-close{
+    position:absolute; top:0; right:0; z-index:8;
+    width:44px; height:44px;
+    display:flex; align-items:center; justify-content:center;
+    border:none; background:transparent; color:var(--warm);
+    font-size:16px; line-height:1; cursor:pointer; touch-action:manipulation;
+    padding:0; opacity:.78;
+  }
+  .note-close:active{opacity:1;}
+  /* 透明度滑块 — 右下角小触控区 */
+  .note-opacity-wrap{
+    position:absolute; bottom:0; right:0; z-index:6;
+    height:44px; display:flex; align-items:center; gap:2px; pointer-events:auto;
+  }
+  .note-opacity{width:72px; height:44px; -webkit-appearance:none; appearance:none; background:transparent; accent-color:var(--warm); touch-action:manipulation; opacity:.6;}
+  .note-opacity:active{opacity:1;}
+  /* 直接编辑工具：和右上角 X 同一排，只保留轻量橘色文字 */
+  .note-edit-tools{
+    position:absolute; top:0; right:44px; left:auto; z-index:8;
+    max-width:calc(100% - 88px); height:44px;
+    display:flex; align-items:center; justify-content:flex-end; gap:0;
+    padding:0; overflow-x:auto; scrollbar-width:none; background:transparent;
+    pointer-events:auto;
+  }
+  .note-edit-tools::-webkit-scrollbar{display:none;}
+  .note-edit-tools button{
+    flex:none; min-width:44px; height:44px; padding:0; border:0;
+    border-radius:0; background:transparent; color:var(--warm);
+    font-family:inherit; font-size:14px; line-height:1; cursor:pointer; touch-action:manipulation;
+  }
+  .note-edit-tools button + button{margin-left:-14px;}
+  .note-edit-tools button:active{opacity:.62; background:transparent;}
+  .note-edit-tools button:focus-visible,.note-close:focus-visible{outline:none;}
+  .note-opacity::-webkit-slider-runnable-track{height:2px; background:rgba(184,116,90,.55); border-radius:2px;}
+  .note-opacity::-webkit-slider-thumb{width:10px; height:10px; margin-top:-4px; border:1px solid var(--warm); border-radius:50%; background:var(--surface); -webkit-appearance:none;}
+  .note-opacity::-moz-range-track{height:2px; background:rgba(184,116,90,.55); border-radius:2px;}
+  .note-opacity::-moz-range-thumb{width:10px; height:10px; border:1px solid var(--warm); border-radius:50%; background:var(--surface);}
+  .note-edge::before{content:""; position:absolute; pointer-events:none; background:rgba(184,116,90,.42);}
+  .note-edge-n::before,.note-edge-s::before{left:22px; right:22px; height:1px;}
+  .note-edge-n::before{top:43px;}
+  .note-edge-s::before{top:0;}
+  .note-edge-w::before,.note-edge-e::before{top:22px; bottom:22px; width:1px;}
+  .note-edge-w::before{left:21px;}
+  .note-edge-e::before{left:21px;}
+  /* 四边调整大小手柄 — 透明热区覆盖 44px */
+  .note-edge{
+    position:absolute; z-index:5; touch-action:none; pointer-events:auto;
+  }
+  .note-edge-n{top:-44px; left:0; right:0; height:44px; cursor:ns-resize;}
+  .note-edge-s{bottom:-44px; left:0; right:0; height:44px; cursor:ns-resize;}
+  .note-edge-w{left:-22px; top:44px; bottom:0; width:44px; z-index:7; cursor:ew-resize;}
+  .note-edge-e{right:-22px; top:44px; bottom:0; width:44px; z-index:7; cursor:ew-resize;}
 
   /* ── 漂浮计数器 ── */
   #floaters{position:fixed; inset:0; pointer-events:none; z-index:30;}
@@ -346,6 +440,17 @@
   #settingsModal .settings-option input{width:20px; height:20px; flex:none; margin:1px 0 0; accent-color:var(--ink);}
   #settingsModal .settings-option .toggle-copy{font-size:14px; line-height:1.5;}
   #settingsModal .settings-option small{display:block; color:var(--ink-2); font-size:12px; line-height:1.6; margin-top:2px;}
+  /* 标尺走向：点标尺本体走一格的方向偏好 */
+  #settingsModal .ruler-dir{border-top:1px solid var(--line); margin-top:14px; padding-top:14px;}
+  #settingsModal .ruler-dir .rd-title{font-size:14px; color:var(--ink); margin-bottom:10px;}
+  #settingsModal .ruler-dir .rd-title small{display:block; color:var(--ink-2); font-size:12px; font-weight:400; line-height:1.6; margin-top:2px;}
+  #settingsModal .rd-row{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+  #settingsModal .rd-row>span{font-size:13px; color:var(--ink-2); width:34px; flex:none;}
+  #settingsModal .rd-row label{flex:none; width:44px; height:44px; display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--warm); border:1px solid var(--line); border-radius:2px; cursor:pointer; touch-action:manipulation; position:relative; transition:border-color .15s, background .15s;}
+  #settingsModal .rd-row label:hover{background:var(--surface-soft); border-color:var(--ink-3);}
+  #settingsModal .rd-row label:has(input:checked){background:var(--warm-soft); border-color:var(--warm); color:var(--warm);}
+  #settingsModal .rd-row label:has(input:focus-visible){outline:1.5px solid var(--ink); outline-offset:1px;}
+  #settingsModal .rd-row input{position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none;}
   #counterEditModal .counter-edit-label{font-size:13px; color:var(--ink-2); margin-bottom:8px;}
   #counterEditModal .counter-edit-input{width:100%; box-sizing:border-box; text-align:center; font-size:22px; font-family:var(--serif); color:var(--ink); border:1px solid var(--line); border-radius:2px; padding:8px 6px; background:var(--surface); font-variant-numeric:tabular-nums;}
   #counterEditModal .counter-edit-input:focus{outline:1.5px solid var(--ink); border-color:var(--ink);}
@@ -472,17 +577,22 @@
 <div id="topbar">
   <button class="btn primary" id="openBtn">📄 <span class="t">打开图解</span></button>
   <input type="file" id="fileInput" accept="application/pdf,image/*" multiple hidden>
+  <input type="file" id="noteImageInput" accept="image/*" hidden>
   <span class="sep"></span>
-  <span id="pageInfo">– / –</span>
+  <span id="pageInfo" aria-label="页码">
+    <input id="pageInput" type="text" inputmode="numeric" pattern="[0-9]*" aria-label="当前页码" value="–">
+    <span id="pageSlash" aria-hidden="true"> / </span><span id="pageTotal">–</span>
+  </span>
   <span class="sep"></span>
   <button class="btn" id="zOut">−</button>
   <button class="btn" id="zIn">＋</button>
-  <button class="btn" id="rotBtn">↻<span class="t"> 旋转</span></button>
+  <button class="btn" id="rotBtn" aria-label="旋转" title="旋转">↻</button>
   <span class="sep"></span>
-  <button class="btn" id="rH">─<span class="t"> 横标尺</span></button>
-  <button class="btn" id="rV">│<span class="t"> 纵标尺</span></button>
+  <button class="btn" id="rH" aria-label="横向标尺" title="横向标尺"><svg class="ruler-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5h18v7H3zM6 8.5v4.5M9 8.5v2.5M12 8.5v4.5M15 8.5v2.5M18 8.5v4.5M21 8.5v2.5"></path></svg></button>
+  <button class="btn" id="rV" aria-label="纵向标尺" title="纵向标尺"><svg class="ruler-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 3h7v18h-7zM8.5 6h4.5M8.5 9h2.5M8.5 12h4.5M8.5 15h2.5M8.5 18h4.5M8.5 21h2.5"></path></svg></button>
   <span class="sep"></span>
   <button class="btn" id="hlY" aria-pressed="false"><span class="hl-dot" style="background:#FF8A00"></span><span class="t">高亮贴</span></button>
+  <button class="btn" id="noteBtn">📝<span class="t"> 便签</span></button>
   <span class="sep"></span>
   <button class="btn" id="addC">＋<span class="t"> 计数器</span></button>
   <button class="btn" id="collapseC">◑<span class="t"> 折叠</span></button>
@@ -507,6 +617,8 @@
     <div class="ruler v gone" id="rulerV" tabindex="0" aria-label="纵向标尺（荧光针标）"><div class="ruler-rs"></div></div>
   </div>
 </div>
+
+<div id="noteLayer" aria-label="跨页便签"></div>
 
 <div id="empty">
   <div class="swatch">O / O \ O<br>| | O / \<br>\ O | | O</div>
@@ -559,7 +671,7 @@
       <input id="ptDays" type="number" min="0" inputmode="numeric" aria-label="天"> 天
       <input id="ptHours" type="number" min="0" inputmode="numeric" aria-label="小时"> 小时
     </div>
-    <p class="note">1、自动计时，帮你记住这份图解的编织时长；<br>2、仅页面在前台时计时（关闭后、最小化、锁屏均不计时）；<br>3、名字和用时不对，都可以自己改。</p>
+    <p class="note">仅页面在前台时计时。</p>
     <button class="btn primary save" id="ptShare">正在编织，分享给织友</button>
     <button class="btn save" id="ptDone" style="margin-top:8px;">已完工，生成图片</button>
   </div>
@@ -569,15 +681,27 @@
   <div class="sheet">
     <button class="mclose" aria-label="关闭">×</button>
     <h3 id="settingsTitle">其他设置</h3>
-    <p class="settings-note">这里放不属于图解累计用时和分享的通用显示设置。</p>
     <label class="settings-option" for="closeCounterTime">
       <input id="closeCounterTime" type="checkbox">
-      <span class="toggle-copy">关闭计数器计时<small>只隐藏计数器下方的时间，不影响图解累计用时、分享卡或同步。</small></span>
+      <span class="toggle-copy">隐藏计数器时间<small>图解累计用时不受影响。</small></span>
     </label>
     <label class="settings-option" for="keepAwake">
       <input id="keepAwake" type="checkbox">
-      <span class="toggle-copy">保持屏幕常亮<small>仅在浏览器支持时生效，离开页面后会按系统规则处理。</small></span>
+      <span class="toggle-copy">保持屏幕常亮</span>
     </label>
+    <div class="ruler-dir">
+      <div class="rd-title">标尺走向<small>轻点标尺，移动一格。</small></div>
+      <div class="rd-row">
+        <span style="display:flex; align-items:center; justify-content:center; color:var(--warm);" aria-label="横向标尺" title="横向标尺"><svg class="ruler-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5h18v7H3zM6 8.5v4.5M9 8.5v2.5M12 8.5v4.5M15 8.5v2.5M18 8.5v4.5M21 8.5v2.5"></path></svg></span>
+        <label title="横向标尺：向上" aria-label="横向标尺向上"><input type="radio" name="rulerDirH" value="up">↑</label>
+        <label title="横向标尺：向下" aria-label="横向标尺向下"><input type="radio" name="rulerDirH" value="down">↓</label>
+      </div>
+      <div class="rd-row">
+        <span style="display:flex; align-items:center; justify-content:center; color:var(--warm);" aria-label="竖向标尺" title="竖向标尺"><svg class="ruler-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 3h7v18h-7zM8.5 6h4.5M8.5 9h2.5M8.5 12h4.5M8.5 15h2.5M8.5 18h4.5M8.5 21h2.5"></path></svg></span>
+        <label title="竖向标尺：向左" aria-label="竖向标尺向左"><input type="radio" name="rulerDirV" value="left">←</label>
+        <label title="竖向标尺：向右" aria-label="竖向标尺向右"><input type="radio" name="rulerDirV" value="right">→</label>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -585,7 +709,6 @@
   <div class="sheet">
     <button class="mclose" aria-label="取消">×</button>
     <h3 id="counterEditTitle">修改行数</h3>
-    <div class="counter-edit-label">输入当前行数</div>
     <input id="counterEditValue" class="counter-edit-input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" aria-label="当前行数">
     <div id="counterEditError" class="counter-edit-error" role="alert"></div>
     <div class="counter-edit-actions">
@@ -600,8 +723,8 @@
     <button class="mclose" aria-label="关闭">×</button>
     <h3>跨设备同步</h3>
     <p class="note">
-      换设备时用。在这台设备点「生成口令」→ 复制 → 到另一台设备粘贴导入。<br>
-      只搬<b>用时</b>和<b>计数器</b>，<b>不搬图解文件</b>——另一台设备要自己打开同一份图解。
+      生成 → 复制 → 在另一台设备导入。<br>
+      仅同步用时和计数器，不含图解文件。
     </p>
     <div class="row">
       <button class="btn primary" id="syncGen">📤 生成口令</button>
@@ -617,7 +740,7 @@
 </div>
 
 <div id="shareView" hidden>
-  <div class="sv-hint">截屏保存这张图，发小红书 / 朋友圈 ~</div>
+  <div class="sv-hint">截图保存或分享。</div>
   <button class="sv-close" aria-label="关闭">×</button>
   <div class="sv-card">
     <div class="sv-motif">O / O \ O
@@ -643,22 +766,21 @@
     </div>
 
     <div class="tabview" id="tab-needle">
-      <p class="sub">选好手里这根针的制式和号数，下面就显示它在各国的对应针号。</p>
       <div class="seglabel">① 你的针号是哪种制式？</div>
       <div class="seg" id="calcSeg"></div>
       <div class="seglabel">② 选择号数</div>
       <div class="selwrap"><select id="calcSel" aria-label="选择号数"></select></div>
       <div class="result" id="calcResult"></div>
       <div class="yarn" id="calcYarn"></div>
-      <p class="foot">「≈」表示国际表里没有完全相同的直径，取了最接近的号；买线配针时以毫米直径（mm）为准最保险。</p>
+      <p class="foot">≈ 为近似针号，请以 mm 为准。</p>
     </div>
 
     <div class="tabview" id="tab-gauge" hidden>
-      <div class="note">在<b>深色框</b>里填数字，<b>绿色格子</b>自动出结果。密度都按「10 厘米内的针数」算。</div>
+      <div class="note">密度：针数 / 10 cm</div>
 
       <div class="mod">
         <div class="mod-t">模块一 · 算合股数</div>
-        <div class="mod-d">已知图解线材规格，算自己的线要合几股才一样粗。线材可按「米/克」或「支数」填，两根各填各的都行。</div>
+        <div class="mod-d">按线材规格估算所需合股数。</div>
         <div class="yarn-in" data-y="p">
           <div class="yl2"><span>图解线材</span><span class="ymodes"><button class="ym on" data-m="mg">米/克</button><button class="ym" data-m="zhi">支数</button></span></div>
           <div class="frow ymg"><input id="g1pm" inputmode="decimal"><span class="u">米 /</span><input id="g1pg" inputmode="decimal"><span class="u">克</span></div>
@@ -674,7 +796,7 @@
 
       <div class="mod">
         <div class="mod-t">模块二 · 算该织哪个码</div>
-        <div class="mod-d">已知自己密度和想要的胸围，算出所需针数，再对照图解各码选最接近的</div>
+        <div class="mod-d">按密度和目标胸围估算针数，对照图解选码。</div>
         <div class="frow"><span class="fl">自己密度</span><input id="g2d" inputmode="decimal"><span class="u">针 / 10cm</span></div>
         <div class="frow"><span class="fl">所需胸围</span><input id="g2b" inputmode="decimal"><span class="u">cm</span></div>
         <div class="res"><span>所需胸围针数</span><span><b id="g2out">—</b> 针</span></div>
@@ -682,7 +804,7 @@
 
       <div class="mod">
         <div class="mod-t">模块三 · 算实际织出的胸围</div>
-        <div class="mod-d">用自己的密度，看图解某个码织出来实际有多大</div>
+        <div class="mod-d">按你的密度估算实际胸围。</div>
         <div class="frow"><span class="fl">自己密度</span><input id="g3sd" inputmode="decimal"><span class="u">针 / 10cm</span></div>
         <div class="frow"><span class="fl">图解密度</span><input id="g3pd" inputmode="decimal"><span class="u">针 / 10cm</span></div>
         <div class="frow"><span class="fl">图解胸围</span><input id="g3pb" inputmode="decimal"><span class="u">cm</span></div>
@@ -691,14 +813,14 @@
 
       <div class="mod">
         <div class="mod-t">模块四 · 算要备多少线</div>
-        <div class="mod-d">已知图解所需米数，算自己的线要准备多少克</div>
+        <div class="mod-d">按图解用线长度估算所需克数。</div>
         <div class="frow"><span class="fl">图解所需</span><input id="g4m" inputmode="decimal"><span class="u">米</span></div>
         <div class="frow"><span class="fl">自己线支数</span><input id="g4a" inputmode="decimal"><span class="u">/</span><input id="g4b" inputmode="decimal"><span class="u">支（如 2 / 26）</span></div>
         <div class="frow"><span class="fl">自己合股数</span><input id="g4c" inputmode="decimal"><span class="u">股</span></div>
         <div class="res"><span>需备线克数</span><span><b id="g4out">—</b> 克</span></div>
       </div>
 
-      <p class="foot" style="margin-top:18px;">本页面计算方式来源不知名织友的「织女计算器.xlsx」，如果是你做的，请联系我为你署名。感谢你造福万千织友❤</p>
+      <p class="foot" style="margin-top:18px;">计算参考《织女计算器.xlsx》，作者请联系署名。</p>
     </div>
   </div>
 </div>
@@ -718,11 +840,34 @@ const state = {
   rulerH:{on:false, r:.3}, rulerV:{on:false, r:.5},
   rulerHSize:15, rulerVSize:15,   /* 标尺色带可见宽度（px），可拖动调节 */
   rotation:0,                      /* 图解旋转角度：0/90/180/270 */
-  pageHl:{}, drawColor:null, selHl:null, counters:[]
+  pageHl:{}, drawColor:null, selHl:null, counters:[], note:null
 };
 const COUNTER_TIME_KEY = "zhiji-show-counter-time-v1";
 let showCounterTime = true;
 try{ showCounterTime = localStorage.getItem(COUNTER_TIME_KEY) !== "0"; }catch(_){ showCounterTime = true; }
+/* ── 标尺走向：点标尺本体走一格的方向，全局偏好，不进 zhiji-v1（换图解/清记录不受影响）── */
+const RULER_DIR_KEY = "zhiji-ruler-dir-v1";
+let rulerDir = { h: "up", v: "left" };          /* 横尺默认向上，竖尺默认向左 */
+function loadRulerDir(){
+  try{
+    const raw = localStorage.getItem(RULER_DIR_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      if(d && (d.h === "up" || d.h === "down")) rulerDir.h = d.h;
+      if(d && (d.v === "left" || d.v === "right")) rulerDir.v = d.v;
+    }
+  }catch(_){ /* 坏数据/被禁用时用默认值，不报错 */ }
+}
+function saveRulerDir(){
+  try{ localStorage.setItem(RULER_DIR_KEY, JSON.stringify(rulerDir)); }
+  catch(_){ toast("这个设置暂时无法保存"); }
+}
+loadRulerDir();
+function applyRulerDirRadios(){
+  const m = $("settingsModal"); if(!m) return;
+  for(const r of m.querySelectorAll("input[name=rulerDirH]")) r.checked = (r.value === rulerDir.h);
+  for(const r of m.querySelectorAll("input[name=rulerDirV]")) r.checked = (r.value === rulerDir.v);
+}
 function applyCounterTimeVisibility(){
   document.body.classList.toggle("hide-counter-time", !showCounterTime);
 }
@@ -746,19 +891,23 @@ const STORAGE_KEY = "zhiji-v1";
    否则 location.reload() 触发的 visibilitychange:hidden 会调 persistNow/saveProjLedger，
    把内存里的旧数据盖回刚导入的新数据上（改这块务必留着这个开关）。 */
 let importing = false;
-const IDB_NAME = "zhiji-files", IDB_STORE = "files", IDB_KEY = "current";
+const IDB_NAME = "zhiji-files", IDB_STORE = "files", IDB_NOTE_STORE = "notes", IDB_VERSION = 2, IDB_KEY = "current";
 function idbOpen(){
   return new Promise((res,rej)=>{
-    const q = indexedDB.open(IDB_NAME, 1);
-    q.onupgradeneeded = ()=>q.result.createObjectStore(IDB_STORE);
+    const q = indexedDB.open(IDB_NAME, IDB_VERSION);
+    q.onupgradeneeded = ()=>{
+      const db=q.result;
+      if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+      if(!db.objectStoreNames.contains(IDB_NOTE_STORE)) db.createObjectStore(IDB_NOTE_STORE);
+    };
     q.onsuccess = ()=>res(q.result);
     q.onerror = ()=>rej(q.error);
   });
 }
-function idbTx(mode, fn){
+function idbTx(mode, fn, storeName=IDB_STORE){
   return idbOpen().then(db=>new Promise((res,rej)=>{
-    const tx = db.transaction(IDB_STORE, mode);
-    const q = fn(tx.objectStore(IDB_STORE));
+    const tx = db.transaction(storeName, mode);
+    const q = fn(tx.objectStore(storeName));
     tx.oncomplete = ()=>{ db.close(); res(q && q.result); };
     tx.onerror = ()=>{ db.close(); rej(tx.error); };
     tx.onabort = ()=>{ db.close(); rej(tx.error); };
@@ -767,6 +916,10 @@ function idbTx(mode, fn){
 const idbPut = val => idbTx("readwrite", s=>s.put(val, IDB_KEY));
 const idbGet = ()  => idbTx("readonly",  s=>s.get(IDB_KEY));
 const idbDel = ()  => idbTx("readwrite", s=>s.delete(IDB_KEY));
+const idbNotePut = val => idbTx("readwrite", s=>s.put(val, val.key), IDB_NOTE_STORE);
+const idbNoteGet = key => idbTx("readonly", s=>s.get(key), IDB_NOTE_STORE);
+const idbNoteDel = key => idbTx("readwrite", s=>s.delete(key), IDB_NOTE_STORE);
+const idbNoteClear = () => idbTx("readwrite", s=>s.clear(), IDB_NOTE_STORE);
 let saveTimer = null;
 function persistNow(){
   if(importing) return;                              // 正在导入口令，别回写
@@ -816,6 +969,8 @@ function restoreFromStorage(){
 function clearAllStorage(){
   try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
   idbDel().catch(()=>{});
+  idbNoteClear().catch(()=>{});
+  clearActiveNote();
   state.rulerH = {on:false, r:.3}; state.rulerV = {on:false, r:.5};
   state.rulerHSize = 15; state.rulerVSize = 15; state.rotation = 0;
   state.pageHl = {}; state.counters = []; state.file = null;
@@ -859,6 +1014,8 @@ $("fileInput").onchange = async e => {
       alert("批量导入只支持图片。");
       return;
     }
+    flushActiveNote();
+    clearActiveNote();
     setHighlightDrawing(false);
     const total = files[0].size + files[1].size;
     const mb = total / 1048576;
@@ -875,11 +1032,12 @@ $("fileInput").onchange = async e => {
       let cached = true;
       try{ await idbPut({name:files[0].name, size:total, blobs:files, kind:"imgs"}); }catch(_){ cached = false; }
       state.file = {name:files[0].name, size:total};   // 账本键 = 第一张名|总大小，重开同一批自动续计
+      await loadNoteForCurrentFile();
       startProject();
       stage.style.display="block";
       await fitWidth();
       queueSave();
-      toast(cached ? "图片已加载，刷新后会自动恢复" : "图片已加载（此浏览器无法缓存，刷新后需重新打开）");
+      if(!cached) toast("无法缓存图片，刷新后需重新打开。");
     }catch(err){ alert("图片无法打开，请换一张（iPad 拍的 HEIC 一般可以，安卓/电脑浏览器可能不支持 HEIC，可先转成 JPG）。"); $("empty").style.display=""; stage.style.display="none"; }
     finally{ $("loading").classList.remove("show"); }
     return;
@@ -887,6 +1045,8 @@ $("fileInput").onchange = async e => {
 
   /* 单文件：原有逻辑，不改 */
   const f = files[0];
+  flushActiveNote();
+  clearActiveNote();
   const mb = f.size / 1048576;
   const asImage = isImageFile(f) && !/\.pdf$/i.test(f.name) && f.type !== "application/pdf";
   setHighlightDrawing(false);
@@ -904,11 +1064,12 @@ $("fileInput").onchange = async e => {
       let cached = true;
       try{ await idbPut({name:f.name, size:f.size, blob:f, kind:"img"}); }catch(_){ cached = false; }
       state.file = {name:f.name, size:f.size};
+      await loadNoteForCurrentFile();
       startProject();
       stage.style.display="block";
       await fitWidth();
       queueSave();
-      toast(cached ? "图片已加载，刷新后会自动恢复" : "图片已加载（此浏览器无法缓存，刷新后需重新打开）");
+      if(!cached) toast("无法缓存图片，刷新后需重新打开。");
     }catch(err){ alert("图片无法打开，请换一张（iPad 拍的 HEIC 一般可以，安卓/电脑浏览器可能不支持 HEIC，可先转成 JPG）。"); $("empty").style.display=""; stage.style.display="none"; }
     finally{ $("loading").classList.remove("show"); }
     return;
@@ -932,11 +1093,13 @@ $("fileInput").onchange = async e => {
     state.pageNum = lastPage;
     state.pageCount = state.pdf.numPages;
     state.file = {name:f.name, size:f.size};
+    await loadNoteForCurrentFile();
     startProject();
     stage.style.display="block";
     await fitWidth();
     queueSave();
-    toast(lastPage > 1 ? `已恢复到第 ${lastPage} 页` : cached ? "PDF 已加载，刷新后会自动恢复" : "PDF 已加载（此浏览器无法缓存文件，刷新后需重新打开）");
+    if(lastPage > 1) toast(`已恢复到第 ${lastPage} 页`);
+    else if(!cached) toast("无法缓存 PDF，刷新后需重新打开。");
   }catch(err){ alert("PDF 无法打开，请换一个文件。"); $("empty").style.display=""; stage.style.display="none"; }
   finally{ $("loading").classList.remove("show"); }
 };
@@ -978,7 +1141,7 @@ function renderImage(){
     ctx.drawImage(img, -iw*state.scale/2, -ih*state.scale/2, iw*state.scale, ih*state.scale);
     ctx.restore();
   }
-  $("pageInfo").textContent = state.imgs ? `${state.pageNum} / ${state.pageCount}` : "图片";
+  setPageInfo(state.imgs ? state.pageNum : null, state.imgs ? state.pageCount : null, state.imgs ? "" : "图片");
   baseW=dw; baseH=dh; renderedScale=state.scale;
 }
 
@@ -992,11 +1155,55 @@ async function render(){
   canvas.width = vp.width*dpr; canvas.height = vp.height*dpr;
   canvas.style.width = vp.width+"px"; canvas.style.height = vp.height+"px";
   await page.render({canvasContext:ctx, viewport:vp, transform:[dpr,0,0,dpr,0,0]}).promise;
-  $("pageInfo").textContent = `${state.pageNum} / ${state.pageCount}`;
+  setPageInfo(state.pageNum,state.pageCount);
   baseW=vp.width; baseH=vp.height; renderedScale=state.scale;
   afterRender();
 }
 function afterRender(){ placeRulers(); renderHls(); updateFlipBtns(); }
+
+function setPageInfo(current,total,label=""){
+  const input=$("pageInput"), slash=$("pageSlash"), totalEl=$("pageTotal");
+  if(!input || !slash || !totalEl) return;
+  const hasTotal=Number.isInteger(total) && total>=1 && Number.isInteger(current) && current>=1;
+  const editable=hasTotal && total>1;
+  input.hidden=!hasTotal;
+  input.value=hasTotal ? String(current) : "";
+  input.placeholder=hasTotal ? "" : "–";
+  input.disabled=!editable;
+  input.setAttribute("aria-disabled",String(!editable));
+  slash.hidden=!hasTotal;
+  totalEl.textContent=hasTotal ? String(total) : label;
+}
+
+async function jumpToPage(raw){
+  const input=$("pageInput");
+  if(!input || input.disabled) return;
+  const text=String(raw ?? "").trim();
+  if(!/^[0-9]+$/.test(text)){
+    setPageInfo(state.pageNum,state.pageCount);
+    toast("请输入有效页码");
+    return;
+  }
+  const next=Number(text);
+  if(!Number.isSafeInteger(next) || next<1 || next>state.pageCount){
+    setPageInfo(state.pageNum,state.pageCount);
+    toast(`页码范围是 1–${state.pageCount}`);
+    return;
+  }
+  if(next===state.pageNum){ setPageInfo(state.pageNum,state.pageCount); return; }
+  state.pageNum=next; state.selHl=null;
+  await render();
+  viewer.scrollTop=0;
+  updateFlipBtns();
+  queueSave();
+}
+
+$("pageInput").addEventListener("keydown",e=>{
+  if(e.key==="Enter"){ e.preventDefault(); e.currentTarget.blur(); }
+  else if(e.key==="Escape"){ e.preventDefault(); setPageInfo(state.pageNum,state.pageCount); e.currentTarget.blur(); }
+});
+$("pageInput").addEventListener("change",e=>jumpToPage(e.currentTarget.value));
+$("pageInput").addEventListener("blur",e=>jumpToPage(e.currentTarget.value));
 
 $("zIn").onclick  = () => { if(needDoc())return; state.scale=clamp(state.scale*1.15,.3,5); render(); queueSave(); };
 $("zOut").onclick = () => { if(needDoc())return; state.scale=clamp(state.scale/1.15,.3,5); render(); queueSave(); };
@@ -1090,9 +1297,11 @@ viewer.addEventListener("pointercancel", ptEnd);
 /* ── 示例图解 ── */
 $("demoBtn").onclick = () => {
   setHighlightDrawing(false);
+  flushActiveNote();
+  clearActiveNote();
   releaseImgs();
   state.demo=true; state.pdf=null; state.img=null; state.pageCount=1; state.pageNum=1;
-  $("pageInfo").textContent="示例";
+  setPageInfo(null,null,"示例");
   $("empty").style.display="none"; stage.style.display="block";
   fitWidth();
   queueSave();
@@ -1143,6 +1352,366 @@ function placeRulers(){
   $("rV").classList.toggle("on", state.rulerV.on);
 }
 function needDoc(){ if(stage.style.display==="none"){toast("请先打开图解或示例");return true;} return false; }
+
+/* ── 跨页悬浮便签：一张便签固定在屏幕上，按图解文件分别保存 ── */
+const noteLayer=$("noteLayer"), noteImageInput=$("noteImageInput");
+let noteImageBlobs=[];       // 当前便签里的图片 Blob，不放进 localStorage
+let noteObjectUrls=[];       // 当前便签展示层用的临时图片地址
+let activeNoteElement=null;  // 当前直接编辑的便签正文
+let noteSavedRange=null;     // 点击粗体按钮前保留的文字选区
+let directImageTarget=null;  // 等待本地选图返回时的便签正文
+let noteLoadToken=0, noteSaveTimer=null;
+
+function noteKeyFor(file=state.file){
+  if(state.demo) return "demo";
+  return file ? file.name+"|"+file.size : null;
+}
+function noteStorageKey(file=state.file){ const k=noteKeyFor(file); return k ? "note:"+k : null; }
+function noteTopInset(){
+  const tb=$("topbar");
+  return tb && !tb.classList.contains("hidden") ? tb.getBoundingClientRect().bottom+8 : 8;
+}
+function noteDefault(){
+  const W=Math.max(window.innerWidth,80), H=Math.max(window.innerHeight,80);
+  const maxW=Math.max(80,W-16), maxH=Math.max(80,H-16);
+  const w=Math.min(maxW,Math.max(224,Math.min(340,W*.72)));
+  const h=Math.min(maxH,Math.max(160,Math.min(300,H*.38)));
+  const top=noteTopInset();
+  return {html:"", x:clamp((W-w-16)/W,.02,Math.max(.02,1-w/W)),
+    y:clamp(top/H,.02,Math.max(.02,1-h/H)), w:w/W, h:h/H, opacity:.92, fontSize:15};
+}
+function normalizeNote(n){
+  const d=noteDefault();
+  return {
+    html:typeof n?.html==="string" ? n.html : "",
+    x:clamp(Number.isFinite(Number(n?.x)) ? Number(n.x) : d.x,0,1),
+    y:clamp(Number.isFinite(Number(n?.y)) ? Number(n.y) : d.y,0,1),
+    w:clamp(Number.isFinite(Number(n?.w)) ? Number(n.w) : d.w,.05,1),
+    h:clamp(Number.isFinite(Number(n?.h)) ? Number(n.h) : d.h,.05,1),
+    opacity:clamp(Number.isFinite(Number(n?.opacity)) ? Number(n.opacity) : d.opacity,0,1),
+    fontSize:clamp(Number.isFinite(Number(n?.fontSize)) ? Number(n.fontSize) : d.fontSize,12,32)
+  };
+}
+function revokeUrls(list){ list.forEach(url=>{ try{ URL.revokeObjectURL(url); }catch(_){} }); list.length=0; }
+function releaseNoteUrls(){ revokeUrls(noteObjectUrls); }
+function clearNoteVisual(){
+  releaseNoteUrls(); noteImageBlobs=[]; state.note=null; noteLayer.innerHTML="";
+  activeNoteElement=null; noteSavedRange=null; directImageTarget=null;
+}
+function clearActiveNote(){
+  noteLoadToken++;
+  clearTimeout(noteSaveTimer); noteSaveTimer=null;
+  clearNoteVisual();
+}
+function noteHasContent(html){
+  const box=document.createElement("div"); box.innerHTML=html||"";
+  return !!box.textContent.trim() || !!box.querySelector("img");
+}
+
+/* 只保留普通文字、粗体、斜体、换行和图片，避免把粘贴网页的多余样式带进便签。 */
+function materializeNoteHtml(raw, blobs, urls){
+  const source=document.createElement("div"), out=document.createElement("div");
+  source.innerHTML=raw||"";
+  const walk=(node,parent)=>{
+    if(node.nodeType===Node.TEXT_NODE){ parent.appendChild(document.createTextNode(node.nodeValue)); return; }
+    if(node.nodeType!==Node.ELEMENT_NODE) return;
+    const tag=node.tagName;
+    if(tag==="IMG"){
+      const i=Number(node.dataset.noteImage), blob=Number.isInteger(i) ? blobs[i] : null;
+      if(blob && typeof blob.size==="number"){
+        const img=document.createElement("img");
+        img.dataset.noteImage=String(i); img.alt="";
+        const url=URL.createObjectURL(blob); urls.push(url); img.src=url;
+        parent.appendChild(img);
+      }
+      return;
+    }
+    if(tag==="BR"){ parent.appendChild(document.createElement("br")); return; }
+    const outTag=tag==="B"||tag==="STRONG" ? "b" : tag==="I"||tag==="EM" ? "i" : null;
+    if(outTag){
+      const el=document.createElement(outTag); parent.appendChild(el);
+      Array.from(node.childNodes).forEach(child=>walk(child,el));
+    }else{
+      Array.from(node.childNodes).forEach(child=>walk(child,parent));
+      if(["DIV","P","LI"].includes(tag) && parent.lastChild && parent.lastChild.nodeName!=="BR")
+        parent.appendChild(document.createElement("br"));
+    }
+  };
+  Array.from(source.childNodes).forEach(child=>walk(child,out));
+  while(out.lastChild && out.lastChild.nodeName==="BR") out.removeChild(out.lastChild);
+  return out.innerHTML;
+}
+function placeNoteElement(el,n,save){
+  const W=Math.max(window.innerWidth,1), H=Math.max(window.innerHeight,1);
+  const minW=Math.min(224,Math.max(80,W-16)), minH=Math.min(140,Math.max(80,H-16));
+  const maxW=Math.max(minW,W-16), maxH=Math.max(minH,H-16);
+  const width=clamp(n.w*W,minW,maxW), height=clamp(n.h*H,minH,maxH);
+  const minTop=Math.min(noteTopInset(),Math.max(0,H-height));
+  const maxTop=Math.max(minTop,H-height);
+  const left=clamp(n.x*W,0,Math.max(0,W-width)), top=clamp(n.y*H,minTop,maxTop);
+  const changed=Math.abs(n.x-left/W)>.0001 || Math.abs(n.y-top/H)>.0001 ||
+                Math.abs(n.w-width/W)>.0001 || Math.abs(n.h-height/H)>.0001;
+  n.x=left/W; n.y=top/H; n.w=width/W; n.h=height/H;
+  el.style.left=left+"px"; el.style.top=top+"px"; el.style.width=width+"px"; el.style.height=height+"px";
+  if(save && changed) queueNoteSave();
+}
+function bindNoteDrag(handle,el,n){
+  handle.addEventListener("pointerdown",e=>{
+    if(e.pointerType==="mouse" && e.button!==0) return;
+    /* don't intercept taps on the close button or opacity slider */
+    if(e.target.closest(".note-close,.note-opacity-wrap,.note-edge")) return;
+    e.preventDefault(); e.stopPropagation();
+    const r=el.getBoundingClientRect(), W=Math.max(window.innerWidth,1), H=Math.max(window.innerHeight,1);
+    const sx=e.clientX, sy=e.clientY, bx=r.left, by=r.top;
+    let moved=false, finished=false;
+    const cleanup=()=>{
+      window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up); window.removeEventListener("pointercancel",cancel);
+    };
+    const cancel=()=>{ if(finished)return; finished=true; cleanup(); el.classList.remove("dragging"); };
+    const move=ev=>{
+      if(finished || ev.pointerId!==e.pointerId) return;
+      const dx=ev.clientX-sx, dy=ev.clientY-sy;
+      if(!moved && Math.hypot(dx,dy)<6) return;
+      moved=true; el.classList.add("dragging");
+      const minTop=Math.min(noteTopInset(),Math.max(0,H-r.height));
+      const left=clamp(bx+dx,0,Math.max(0,W-r.width)), top=clamp(by+dy,minTop,Math.max(minTop,H-r.height));
+      n.x=left/W; n.y=top/H; el.style.left=left+"px"; el.style.top=top+"px";
+    };
+    const up=ev=>{
+      if(finished || ev.pointerId!==e.pointerId) return;
+      finished=true; cleanup(); el.classList.remove("dragging");
+      if(moved) queueNoteSave();
+    };
+    window.addEventListener("pointermove",move); window.addEventListener("pointerup",up); window.addEventListener("pointercancel",cancel);
+  });
+}
+function bindNoteEdgeResize(el,n){
+  /* dir: 'n','s','e','w' */
+  el.querySelectorAll(".note-edge").forEach(handle=>{
+    const dir=handle.dataset.edge;
+    handle.addEventListener("pointerdown",e=>{
+      if(e.pointerType==="mouse" && e.button!==0) return;
+      e.preventDefault(); e.stopPropagation();
+      const r=el.getBoundingClientRect(), W=Math.max(window.innerWidth,1), H=Math.max(window.innerHeight,1);
+      const minW=Math.min(224,Math.max(80,W-16)), minH=Math.min(140,Math.max(80,H-16));
+      const topLimit=noteTopInset();
+      const sx=e.clientX, sy=e.clientY;
+      let finished=false;
+      const cleanup=()=>{
+        window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up); window.removeEventListener("pointercancel",up);
+      };
+      const move=ev=>{
+        if(finished || ev.pointerId!==e.pointerId) return;
+        let left=r.left, top=r.top, width=r.width, height=r.height;
+        if(dir==="e"){ width=clamp(r.width+ev.clientX-sx,minW,Math.max(minW,W-r.left)); }
+        else if(dir==="w"){ const newLeft=clamp(r.left+ev.clientX-sx,0,r.right-minW); width=r.right-newLeft; left=newLeft; }
+        else if(dir==="s"){ height=clamp(r.height+ev.clientY-sy,minH,Math.max(minH,H-r.top)); }
+        else if(dir==="n"){ const newTop=clamp(r.top+ev.clientY-sy,topLimit,r.bottom-minH); height=r.bottom-newTop; top=newTop; }
+        n.x=left/W; n.y=top/H; n.w=width/W; n.h=height/H;
+        el.style.left=left+"px"; el.style.top=top+"px"; el.style.width=width+"px"; el.style.height=height+"px";
+      };
+      const up=ev=>{
+        if(finished || ev.pointerId!==e.pointerId) return;
+        finished=true; cleanup(); queueNoteSave();
+      };
+      window.addEventListener("pointermove",move); window.addEventListener("pointerup",up); window.addEventListener("pointercancel",up);
+    });
+  });
+}
+function renderNote(){
+  noteLayer.innerHTML="";
+  activeNoteElement=null; noteSavedRange=null; directImageTarget=null;
+  const n=state.note;
+  if(!n) return;
+  releaseNoteUrls();
+  const el=document.createElement("div"); el.className="note-card";
+  el.innerHTML=`
+    <div class="note-surface">
+      <div class="note-dragbar" aria-label="拖动便签"></div>
+      <div class="note-content" contenteditable="true" role="textbox" aria-multiline="true" aria-label="便签内容"></div>
+    </div>
+    <button class="note-close" type="button" aria-label="删除便签">✕</button>
+    <div class="note-opacity-wrap">
+      <input class="note-opacity" type="range" min="0" max="1" step="0.05" aria-label="便签透明度">
+    </div>
+    <div class="note-edit-tools" aria-label="便签格式工具">
+      <button class="note-bold" type="button" aria-label="粗体"><b>B</b></button>
+      <button class="note-font-down" type="button" aria-label="减小字号">−</button>
+      <button class="note-font-up" type="button" aria-label="增大字号">＋</button>
+      <button class="note-add-image" type="button" aria-label="添加图片">▧</button>
+    </div>
+    <div class="note-edge note-edge-n" data-edge="n"></div>
+    <div class="note-edge note-edge-s" data-edge="s"></div>
+    <div class="note-edge note-edge-w" data-edge="w"></div>
+    <div class="note-edge note-edge-e" data-edge="e"></div>`;
+  noteLayer.appendChild(el);
+  const content=el.querySelector(".note-content"), opacity=el.querySelector(".note-opacity");
+  content.innerHTML=materializeNoteHtml(n.html,noteImageBlobs,noteObjectUrls);
+  applyNoteFont(el,n);
+  opacity.value=String(n.opacity); el.style.setProperty("--note-opacity",String(n.opacity));
+  placeNoteElement(el,n,true);
+
+  const beginEdit=()=>{ activeNoteElement=content; el.classList.add("editing"); rememberNoteSelection(content); };
+  const finishEdit=()=>setTimeout(()=>{
+    if(el.contains(document.activeElement)) return;
+    syncNoteFromContent(content); el.classList.remove("editing");
+    if(activeNoteElement===content){ activeNoteElement=null; noteSavedRange=null; }
+  },0);
+  content.addEventListener("focus",beginEdit);
+  content.addEventListener("blur",finishEdit);
+  content.addEventListener("input",()=>{ beginEdit(); syncNoteFromContent(content); });
+  content.addEventListener("mouseup",()=>rememberNoteSelection(content));
+  content.addEventListener("keyup",()=>rememberNoteSelection(content));
+  content.addEventListener("touchend",()=>rememberNoteSelection(content));
+  content.addEventListener("paste",e=>{
+    const item=Array.from(e.clipboardData?.items || []).find(entry=>entry.kind==="file" && entry.type.startsWith("image/"));
+    if(!item) return;
+    const file=item.getAsFile(); if(!file) return;
+    e.preventDefault(); beginEdit(); insertDirectNoteImage(file,content);
+  });
+
+  opacity.oninput=()=>{ n.opacity=clamp(Number(opacity.value),0,1); el.style.setProperty("--note-opacity",String(n.opacity)); queueNoteSave(); };
+  el.querySelector(".note-close").onclick=()=>deleteNote();
+  el.querySelector(".note-add-image").onclick=()=>{
+    beginEdit(); rememberNoteSelection(content); directImageTarget=content; noteImageInput.click();
+  };
+  el.querySelector(".note-font-down").onclick=()=>changeNoteFontSize(el,n,-1);
+  el.querySelector(".note-font-up").onclick=()=>changeNoteFontSize(el,n,1);
+  const format=(command)=>()=>formatDirectNote(content,command);
+  const bold=el.querySelector(".note-bold");
+  bold.onclick=format("bold");
+  bold.addEventListener("pointerdown",e=>{ rememberNoteSelection(content); e.preventDefault(); });
+  bindNoteDrag(el.querySelector(".note-dragbar"),el,n);
+  bindNoteEdgeResize(el,n);
+}
+async function saveNoteNow(){
+  if(importing || !state.note) return;
+  const key=noteStorageKey(), n=state.note;
+  if(!key) return;
+  if(!noteHasContent(n.html)){
+    try{ await idbNoteDel(key); }catch(_){ }
+    return;
+  }
+  const snapshot={key, version:1, html:n.html, x:n.x, y:n.y, w:n.w, h:n.h, opacity:n.opacity, fontSize:n.fontSize, images:noteImageBlobs.slice()};
+  try{ await idbNotePut(snapshot); }
+  catch(_){ toast("便签暂时无法保存"); }
+}
+function queueNoteSave(){
+  clearTimeout(noteSaveTimer);
+  noteSaveTimer=setTimeout(()=>{ noteSaveTimer=null; saveNoteNow(); },300);
+}
+async function loadNoteForCurrentFile(){
+  const token=++noteLoadToken;
+  clearTimeout(noteSaveTimer); noteSaveTimer=null;
+  clearNoteVisual();
+  const key=noteStorageKey(); if(!key) return;
+  let rec=null; try{ rec=await idbNoteGet(key); }catch(_){ return; }
+  if(token!==noteLoadToken || key!==noteStorageKey()) return;
+  if(!rec || typeof rec.html!=="string" || !noteHasContent(rec.html)) return;
+  state.note=normalizeNote(rec);
+  noteImageBlobs=Array.isArray(rec.images) ? rec.images.filter(blob=>blob && typeof blob.size==="number") : [];
+  renderNote();
+}
+async function deleteNote(){
+  const key=noteStorageKey(); clearActiveNote();
+  if(key) try{ await idbNoteDel(key); }catch(_){ toast("便签删除失败，请再试一次"); return; }
+  toast("便签已删除");
+}
+function serializeNoteElement(el,blobs){
+  const source=document.createElement("div"), out=document.createElement("div");
+  source.innerHTML=el.innerHTML;
+  const walk=(node,parent)=>{
+    if(node.nodeType===Node.TEXT_NODE){ parent.appendChild(document.createTextNode(node.nodeValue)); return; }
+    if(node.nodeType!==Node.ELEMENT_NODE) return;
+    const tag=node.tagName;
+    if(tag==="IMG"){
+      const i=Number(node.dataset.noteImage), blob=Number.isInteger(i) ? blobs[i] : null;
+      if(blob && typeof blob.size==="number"){
+        const img=document.createElement("img"); img.dataset.noteImage=String(i); img.alt=""; parent.appendChild(img);
+      }
+      return;
+    }
+    if(tag==="BR"){ parent.appendChild(document.createElement("br")); return; }
+    const outTag=tag==="B"||tag==="STRONG" ? "b" : tag==="I"||tag==="EM" ? "i" : null;
+    if(outTag){
+      const child=document.createElement(outTag); parent.appendChild(child); Array.from(node.childNodes).forEach(item=>walk(item,child));
+    }else{
+      Array.from(node.childNodes).forEach(item=>walk(item,parent));
+      if(["DIV","P","LI"].includes(tag) && parent.lastChild && parent.lastChild.nodeName!=="BR") parent.appendChild(document.createElement("br"));
+    }
+  };
+  Array.from(source.childNodes).forEach(item=>walk(item,out));
+  while(out.lastChild && out.lastChild.nodeName==="BR") out.removeChild(out.lastChild);
+  return {html:out.innerHTML,images:blobs.slice()};
+}
+function syncNoteFromContent(el){
+  if(!state.note || !el || !el.isConnected) return;
+  const result=serializeNoteElement(el,noteImageBlobs);
+  state.note.html=result.html; noteImageBlobs=result.images; queueNoteSave();
+}
+function applyNoteFont(el,n){
+  const size=clamp(Number(n.fontSize)||15,12,32); n.fontSize=size;
+  const content=el.querySelector(".note-content");
+  if(content) content.style.fontSize=size+"px";
+}
+function changeNoteFontSize(el,n,delta){
+  n.fontSize=clamp((Number(n.fontSize)||15)+delta,12,32);
+  applyNoteFont(el,n); queueNoteSave();
+}
+function rememberNoteSelection(el=activeNoteElement){
+  const sel=window.getSelection();
+  if(el && sel && sel.rangeCount && el.contains(sel.anchorNode)) noteSavedRange=sel.getRangeAt(0).cloneRange();
+}
+function restoreNoteSelection(el){
+  el.focus();
+  if(!noteSavedRange || !el.contains(noteSavedRange.startContainer)) return;
+  const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(noteSavedRange);
+}
+function formatDirectNote(el,command){
+  rememberNoteSelection(el); restoreNoteSelection(el);
+  if(document.execCommand) document.execCommand(command,false,null);
+  syncNoteFromContent(el); rememberNoteSelection(el);
+}
+function insertDirectNoteImage(blob,el=directImageTarget || activeNoteElement){
+  if(!blob || typeof blob.size!=="number" || !el || !state.note) return;
+  const i=noteImageBlobs.length; noteImageBlobs.push(blob);
+  const url=URL.createObjectURL(blob); noteObjectUrls.push(url);
+  const img=document.createElement("img"); img.dataset.noteImage=String(i); img.alt=""; img.src=url;
+  restoreNoteSelection(el);
+  const sel=window.getSelection();
+  if(sel && sel.rangeCount && el.contains(sel.anchorNode)){
+    const range=sel.getRangeAt(0); range.deleteContents(); range.insertNode(img); range.setStartAfter(img); range.collapse(true);
+    sel.removeAllRanges(); sel.addRange(range);
+  }else el.appendChild(img);
+  el.focus(); rememberNoteSelection(el); syncNoteFromContent(el);
+}
+function flushActiveNote(){
+  if(activeNoteElement && activeNoteElement.isConnected) syncNoteFromContent(activeNoteElement);
+  if(state.note) saveNoteNow();
+  activeNoteElement=null; noteSavedRange=null; directImageTarget=null;
+  noteLayer.querySelector(".note-card")?.classList.remove("editing");
+}
+function openOrFocusNote(){
+  if(needDoc()) return;
+  if(!state.note){ state.note=normalizeNote({html:""}); renderNote(); }
+  const content=noteLayer.querySelector(".note-content"); if(!content) return;
+  activeNoteElement=content; content.closest(".note-card")?.classList.add("editing");
+  content.focus();
+  const range=document.createRange(); range.selectNodeContents(content); range.collapse(false);
+  const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range); noteSavedRange=range.cloneRange();
+}
+$("noteBtn").onclick=openOrFocusNote;
+noteImageInput.onchange=e=>{
+  const file=e.target.files && e.target.files[0], target=directImageTarget || activeNoteElement;
+  e.target.value=""; directImageTarget=null; if(file) insertDirectNoteImage(file,target);
+};
+document.addEventListener("selectionchange",()=>{ if(activeNoteElement) rememberNoteSelection(activeNoteElement); });
+function refreshNoteLayout(){
+  const card=activeNoteElement && activeNoteElement.closest(".note-card");
+  if(card && state.note && card.classList.contains("editing")){ placeNoteElement(card,state.note,true); return; }
+  renderNote();
+}
+
 $("rH").onclick=()=>{ if(needDoc())return; state.rulerH.on=!state.rulerH.on; placeRulers(); };
 $("rV").onclick=()=>{ if(needDoc())return; state.rulerV.on=!state.rulerV.on; placeRulers(); };
 
@@ -1154,20 +1723,40 @@ function dragRuler(el, axis, key){
     e.stopPropagation();                       // 别让 viewer 误认成缩放手势
     try{ el.setPointerCapture(e.pointerId); }catch(_){}
     let moved=false;
+    const sx=e.clientX, sy=e.clientY;          // 步进判定的锚点：微抖不算拖
+    const pid=e.pointerId;                     // 只认按下这根手指，别的手指松开不算
     const move=ev=>{
+      if(ev.pointerId!==pid) return;
+      if(Math.hypot(ev.clientX-sx, ev.clientY-sy) > 5) moved=true;   // 超过 5px 才算拖动
+      if(!moved) return;
       const r=canvas.getBoundingClientRect();
       state[key].r = clamp(axis==="y" ? (ev.clientY-r.top)/r.height : (ev.clientX-r.left)/r.width, 0, 1);
-      placeRulers(); moved=true;
+      placeRulers();
     };
-    const up=()=>{
+    const done=()=>{                           // 统一摘除三个监听（cancel 挂的是 cancelFn，不是 up）
       window.removeEventListener("pointermove",move);
       window.removeEventListener("pointerup",up);
-      window.removeEventListener("pointercancel",up);
+      window.removeEventListener("pointercancel",cancelFn);
+    };
+    const up=ev=>{
+      if(ev.pointerId!==pid) return;
+      done();
+      if(moved){ queueSave(); return; }
+      /* 没拖过＝点按标尺本体：朝偏好方向走一格，步长＝当前厚度（色带宽）按画布尺寸换算 */
+      const r=canvas.getBoundingClientRect();
+      const step=(state[key==="rulerH"?"rulerHSize":"rulerVSize"]||15)/ (axis==="y"?r.height:r.width);
+      const fwd=(axis==="y" ? rulerDir.h==="down" : rulerDir.v==="right") ? 1 : -1;
+      state[key].r=clamp(state[key].r+fwd*step,0,1);   /* 到 0/1 停住，不翻页 */
+      placeRulers(); queueSave();
+    };
+    const cancelFn=ev=>{                       // pointercancel＝手势被系统打断，不是点按；已拖到的位置照常保存
+      if(ev.pointerId!==pid) return;
+      done();
       if(moved) queueSave();
     };
     window.addEventListener("pointermove",move);
     window.addEventListener("pointerup",up);
-    window.addEventListener("pointercancel",up);
+    window.addEventListener("pointercancel",cancelFn);
   });
   el.addEventListener("keydown", e=>{
     const map = axis==="y" ? {ArrowUp:-1,ArrowDown:1} : {ArrowLeft:-1,ArrowRight:1};
@@ -1609,6 +2198,11 @@ $("closeCounterTime").addEventListener("change", e=>{
   queueSave();
 });
 $("keepAwake").addEventListener("change", e=>setAwake(!!e.target.checked));
+$("settingsModal").addEventListener("change", e=>{
+  if(e.target.name==="rulerDirH" && e.target.checked){ rulerDir.h=e.target.value; saveRulerDir(); }
+  if(e.target.name==="rulerDirV" && e.target.checked){ rulerDir.v=e.target.value; saveRulerDir(); }
+});
+applyRulerDirRadios();   /* 打开面板前先同步一次选中态（刷新后保持） */
 $("settingsModal").addEventListener("click", e=>{
   if(e.target.id==="settingsModal" || e.target.classList.contains("mclose")) $("settingsModal").hidden=true;
 });
@@ -1714,6 +2308,7 @@ else { addCounter("行数"); addCounter("花样重复"); }
         state.pageCount = imgs.length;
         state.pageNum = clamp(typeof state.pageNum === "number" ? state.pageNum : 1, 1, state.pageCount);
         state.file = {name:rec.name, size:rec.size};
+        await loadNoteForCurrentFile();
         startProject();
         stage.style.display="block";
         await (hadSave ? render() : fitWidth());
@@ -1723,6 +2318,7 @@ else { addCounter("行数"); addCounter("花样重复"); }
         state.pdf = null; state.demo = false;
         state.pageCount = 1; state.pageNum = 1;
         state.file = {name:rec.name, size:rec.size};
+        await loadNoteForCurrentFile();
         startProject();
         stage.style.display="block";
         await (hadSave ? render() : fitWidth());
@@ -1733,6 +2329,7 @@ else { addCounter("行数"); addCounter("花样重复"); }
         state.pageCount = state.pdf.numPages;
         state.pageNum = clamp(typeof state.pageNum === "number" ? state.pageNum : 1, 1, state.pageCount);
         state.file = {name:rec.name, size:rec.size};
+        await loadNoteForCurrentFile();
         startProject();
         stage.style.display="block";
         await (hadSave ? render() : fitWidth());
@@ -1743,7 +2340,8 @@ else { addCounter("行数"); addCounter("花样重复"); }
       toast("缓存的图解恢复失败，请重新打开");
     }finally{ $("loading").classList.remove("show"); }
   } else if(state.demo){
-    state.pageCount = 1; $("pageInfo").textContent = "示例";
+    state.pageCount = 1; setPageInfo(null,null,"示例");
+    await loadNoteForCurrentFile();
     $("empty").style.display="none"; stage.style.display="block";
     await render();
   }
@@ -2055,8 +2653,8 @@ document.querySelectorAll("#tab-gauge .yarn-in").forEach(y=>{
 });
 
 /* ── 专注模式 ── */
-$("focusBtn").onclick=()=>{ $("topbar").classList.add("hidden"); document.body.classList.add("focus"); updateFlipBtns(); };
-$("peek").onclick=()=>{ $("topbar").classList.remove("hidden"); document.body.classList.remove("focus"); updateFlipBtns(); };
+$("focusBtn").onclick=()=>{ $("topbar").classList.add("hidden"); document.body.classList.add("focus"); refreshNoteLayout(); updateFlipBtns(); };
+$("peek").onclick=()=>{ $("topbar").classList.remove("hidden"); document.body.classList.remove("focus"); refreshNoteLayout(); updateFlipBtns(); };
 
 /* 手机屏幕（≤640px）自动进入专注模式，避免工具条占满3行 */
 if(window.innerWidth <= 640){
@@ -2065,7 +2663,7 @@ if(window.innerWidth <= 640){
 }
 
 /* 旋转 / 改变窗口：把计数器拉回屏幕内 */
-window.addEventListener("resize", ()=>{ renderCounters(); if(stage.style.display!=="none") afterRender(); });
+window.addEventListener("resize", ()=>{ renderCounters(); refreshNoteLayout(); if(stage.style.display!=="none") afterRender(); });
 </script>
 <!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "a7e36964fe414bcc81d8c18adad9d6a0"}'></script>
