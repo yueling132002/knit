@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>毛线用量计算器 · 换线 / 小样 / 进度预测</title>
+  <meta name="description" content="帮织友精准测算毛线用量：按图解换线（支数、米数换算）、小样称重估算、编织进度预测剩余线够不够。" />
+  <meta name="theme-color" content="#f7f1e8" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧶</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="wrap">
+    <a class="back" href="../">← 返回图解伴侣</a>
+    <h1>🧶 毛线用量计算器</h1>
+    <p class="sub">换线、配线、织到一半怕不够？按<b>米数</b>算，别按克数猜。</p>
+  </header>
+
+  <nav class="tabs wrap" role="tablist">
+    <button class="tab" data-tab="pattern" role="tab">① 按图解换线</button>
+    <button class="tab" data-tab="swatch" role="tab">② 小样称重</button>
+    <button class="tab" data-tab="progress" role="tab">③ 进度预测</button>
+    <button class="tab" data-tab="convert" role="tab">④ 支数换算</button>
+  </nav>
+
+  <main class="wrap">
+    <section class="panel" id="panel-pattern"></section>
+    <section class="panel" id="panel-swatch"></section>
+    <section class="panel" id="panel-progress"></section>
+    <section class="panel" id="panel-convert"></section>
+  </main>
+
+  <footer class="wrap">
+    <p>所有数据只保存在你自己的浏览器里，不会上传。计算结果是估算值，买线时建议多备 10%–15%，同一缸号一次买够。</p>
+    <p><button class="link" data-action="reset">清空所有数据</button></p>
+  </footer>
+
+  <script src="calc.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

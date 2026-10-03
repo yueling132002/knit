@@ -373,7 +373,7 @@
   body.multipage #toast{bottom:82px;}
 
   /* ── 推荐工具下拉菜单 ── */
-  #toolsMenu{
+  #toolsMenu, #calcMenu{
     position:fixed; z-index:50; display:none;
     background:var(--panel-strong);
     -webkit-backdrop-filter:blur(30px) saturate(180%); backdrop-filter:blur(30px) saturate(180%);
@@ -381,16 +381,17 @@
     box-shadow:0 4px 20px rgba(31,26,20,.14);
     padding:6px 0; min-width:240px;
   }
-  #toolsMenu.show{display:block;}
-  #toolsMenu a{
+  #calcMenu{max-width:calc(100vw - 16px);}
+  #toolsMenu.show, #calcMenu.show{display:block;}
+  #toolsMenu a, #calcMenu a{
     display:flex; align-items:flex-start; gap:10px;
     padding:10px 16px; text-decoration:none; color:var(--ink);
     transition:background .12s;
   }
-  #toolsMenu a:hover{background:var(--surface-deep);}
-  #toolsMenu a .icon{font-size:18px; flex:none; margin-top:1px;}
-  #toolsMenu a .info .name{display:block; font-size:13px; font-weight:500; color:var(--ink);}
-  #toolsMenu a .info .desc{display:block; font-size:11.5px; color:var(--ink-2); margin-top:2px; line-height:1.5;}
+  #toolsMenu a:hover, #calcMenu a:hover{background:var(--surface-deep);}
+  #toolsMenu a .icon, #calcMenu a .icon{font-size:18px; flex:none; margin-top:1px;}
+  #toolsMenu a .info .name, #calcMenu a .info .name{display:block; font-size:13px; font-weight:500; color:var(--ink);}
+  #toolsMenu a .info .desc, #calcMenu a .info .desc{display:block; font-size:11.5px; color:var(--ink-2); margin-top:2px; line-height:1.5;}
   #toolsMenu .menu-hd{padding:8px 16px 4px; font-size:11px; letter-spacing:.08em;
     color:var(--ink-3); font-weight:500;}
 
@@ -601,7 +602,7 @@
   <span class="sep"></span>
   <span style="flex:1"></span>
   <button class="btn" id="syncBtn" title="跨设备同步用时和计数器">🔄<span class="t"> 同步</span></button>
-  <button class="btn" id="calcBtn" title="针号&amp;密度换算">🧮<span class="t"> 针号&amp;密度换算</span></button>
+  <button class="btn" id="calcBtn" title="针号&amp;线材换算">🧮<span class="t"> 针号&amp;线材换算</span></button>
   <button class="btn" id="toolsBtn">🔗<span class="t"> 推荐工具</span></button>
   <button class="btn" id="fbBtn">🍾<span class="t"> 许愿瓶</span></button>
   <button class="btn" id="tipBtn" hidden>🧡<span class="t"> 打赏</span></button>
@@ -638,6 +639,24 @@
 <div id="toast"></div>
 <button class="flipbtn" id="flipPrev">‹ 上一页</button>
 <button class="flipbtn" id="flipNext">下一页 ›</button>
+
+<!-- 针号&线材换算下拉菜单 -->
+<div id="calcMenu">
+  <a href="calc/">
+    <span class="icon">🧶</span>
+    <span class="info">
+      <span class="name">备线计算器</span>
+      <span class="desc">换线、配线、织到一半怕不够？按米数算</span>
+    </span>
+  </a>
+  <a href="#" id="calcOpenModal">
+    <span class="icon">🧮</span>
+    <span class="info">
+      <span class="name">针号&amp;密度换算</span>
+      <span class="desc">针号对照、密度、胸围、合股数</span>
+    </span>
+  </a>
+</div>
 
 <!-- 推荐工具下拉菜单：以后加友情链接在这里加 <a> 即可 -->
 <div id="toolsMenu">
@@ -2449,15 +2468,18 @@ $("syncDoImp").onclick = () => {
 
 /* ── 推荐工具菜单 ── */
 const toolsMenu=$("toolsMenu");
+const calcMenu=$("calcMenu");
 $("toolsBtn").onclick=e=>{
   e.stopPropagation();
+  calcMenu.classList.remove("show");
   const r=$("toolsBtn").getBoundingClientRect();
   toolsMenu.style.top=(r.bottom+6)+"px";
   toolsMenu.style.right=(window.innerWidth-r.right)+"px";
   toolsMenu.classList.toggle("show");
 };
-document.addEventListener("click",()=>toolsMenu.classList.remove("show"));
+document.addEventListener("click",()=>{ toolsMenu.classList.remove("show"); calcMenu.classList.remove("show"); });
 toolsMenu.addEventListener("click",e=>e.stopPropagation());
+calcMenu.addEventListener("click",e=>e.stopPropagation());
 $("modal").addEventListener("click", e=>{
   if(e.target.id==="modal" || e.target.classList.contains("mclose")) $("modal").hidden=true;
 });
@@ -2597,7 +2619,20 @@ function calcShow(i){
   }else{ yb.style.display="none"; }
 }
 $("calcSel").onchange = e => calcShow(+e.target.value);
-$("calcBtn").onclick = ()=>{ $("calc").hidden=false; };
+$("calcBtn").onclick = e=>{
+  e.stopPropagation();
+  toolsMenu.classList.remove("show");
+  const r=$("calcBtn").getBoundingClientRect();
+  const w=Math.min(260, window.innerWidth-16);
+  calcMenu.style.top=(r.bottom+6)+"px";
+  calcMenu.style.left=Math.max(8, Math.min(r.left, window.innerWidth-w-8))+"px";
+  calcMenu.classList.toggle("show");
+};
+$("calcOpenModal").onclick = e=>{
+  e.preventDefault();
+  calcMenu.classList.remove("show");
+  $("calc").hidden=false;
+};
 $("calc").addEventListener("click", e=>{
   if(e.target.id==="calc" || e.target.classList.contains("mclose")) $("calc").hidden=true;
 });
