@@ -25,12 +25,17 @@
     --accent-soft:#E8EBE0;
     --warm:#B8745A;
     --warm-soft:#F0E4D8;
-    --hl-butter:rgba(255,138,0,.30);      /* 高亮贴：亮橙（原奶油黄褐已弃用）*/
-    --hl-butter-b:rgba(255,120,0,.80);
-    --hl-clay:rgba(184,116,90,.15);
-    --hl-clay-b:rgba(184,116,90,.55);
-    --hl-sage:rgba(107,122,94,.15);
-    --hl-sage-b:rgba(107,122,94,.5);
+    --ruler-h-rgb:24,175,193;
+    --ruler-v-rgb:155,128,180;
+    --ruler-h-opacity:1;
+    --ruler-v-opacity:1;
+    --ruler-h-fill-alpha:.45;
+    --ruler-h-edge-alpha:.8;
+    --ruler-v-fill-alpha:.34;
+    --ruler-v-edge-alpha:.75;
+    --highlight-rgb:255,159,10;
+    --highlight-fill-alpha:.30;
+    --highlight-edge-alpha:.80;
     --panel:rgba(255,255,255,.85);
     --panel-strong:rgba(255,255,255,.94);
     --night-bg:#0F0D0A;
@@ -122,9 +127,9 @@
   .ruler.v{top:-8px; bottom:-8px; width:44px; background:transparent;}
   .ruler::before{content:""; position:absolute; pointer-events:none;}   /* 只是可见色带，命中交给元素本体 */
   .ruler.h::before{left:0; right:0; top:50%; transform:translateY(-50%); height:var(--ruler-size,15px);
-    background:rgba(255,232,0,.45); border-top:1.5px solid rgba(240,205,0,.8); border-bottom:1.5px solid rgba(240,205,0,.8);}
+    background:rgba(var(--ruler-h-rgb),var(--ruler-h-fill-alpha,.45)); border-top:1.5px solid rgba(var(--ruler-h-rgb),var(--ruler-h-edge-alpha,.8)); border-bottom:1.5px solid rgba(var(--ruler-h-rgb),var(--ruler-h-edge-alpha,.8)); opacity:var(--ruler-h-opacity,1);}
   .ruler.v::before{top:0; bottom:0; left:50%; transform:translateX(-50%); width:var(--ruler-size,15px);
-    background:rgba(255,45,149,.34); border-left:1.5px solid rgba(235,20,130,.75); border-right:1.5px solid rgba(235,20,130,.75);}
+    background:rgba(var(--ruler-v-rgb),var(--ruler-v-fill-alpha,.34)); border-left:1.5px solid rgba(var(--ruler-v-rgb),var(--ruler-v-edge-alpha,.75)); border-right:1.5px solid rgba(var(--ruler-v-rgb),var(--ruler-v-edge-alpha,.75)); opacity:var(--ruler-v-opacity,1);}
   .ruler.gone{display:none;}
   /* 标尺宽度调节手柄：放在色带边缘，拖动改宽度 */
   .ruler.h .ruler-rs{
@@ -401,8 +406,13 @@
   #modal[hidden], #ptModal[hidden], #syncModal[hidden], #counterEditModal[hidden], #settingsModal[hidden]{display:none;}
   #modal .sheet, #ptModal .sheet, #syncModal .sheet, #counterEditModal .sheet, #settingsModal .sheet{background:var(--surface); border-radius:4px; padding:28px 24px; max-width:340px; width:100%;
     text-align:center; position:relative; box-shadow:0 10px 40px rgba(31,26,20,.20);}
+  #settingsModal .sheet{max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px); padding:0; display:flex; flex-direction:column; overflow:hidden;}
+  #settingsModal .settings-header{position:relative; flex:none; display:flex; align-items:center; min-height:68px; padding:16px 50px; background:var(--surface);}
+  #settingsModal .settings-header h3{flex:1; margin:0; text-align:center;}
+  #settingsModal .settings-body{min-height:0; padding:0 24px 24px; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;}
   #modal .mclose, #ptModal .mclose, #syncModal .mclose, #counterEditModal .mclose, #settingsModal .mclose{position:absolute; top:6px; right:6px; width:40px; height:40px; border:none;
     background:none; font-size:20px; color:var(--ink-2); cursor:pointer; touch-action:manipulation;}
+  #settingsModal .mclose{width:44px; height:44px;}
   #modal h3, #ptModal h3, #syncModal h3, #counterEditModal h3, #settingsModal h3{font-size:20px; margin-bottom:16px; color:var(--ink); font-weight:600; font-family:var(--serif); letter-spacing:-0.01em;}
   #modal img{width:200px; height:200px; object-fit:contain; border:1px solid var(--line); border-radius:2px;}
   #modal p{font-size:15px; color:var(--ink); line-height:1.8; margin-top:14px; font-weight:400; white-space:pre-wrap;}
@@ -452,6 +462,23 @@
   #settingsModal .rd-row label:has(input:checked){background:var(--warm-soft); border-color:var(--warm); color:var(--warm);}
   #settingsModal .rd-row label:has(input:focus-visible){outline:1.5px solid var(--ink); outline-offset:1px;}
   #settingsModal .rd-row input{position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none;}
+  #settingsModal .marker-colors{border-top:1px solid var(--line); margin-top:14px; padding-top:14px; text-align:left;}
+  #settingsModal .marker-colors .rd-title{font-size:14px; color:var(--ink); margin-bottom:8px;}
+  #settingsModal .marker-colors .rd-title small{display:block; color:var(--ink-2); font-size:12px; line-height:1.6; margin-top:2px;}
+  #settingsModal .marker-targets{display:grid; grid-template-columns:repeat(3,minmax(44px,1fr)); gap:4px; margin-bottom:8px;}
+  #settingsModal .marker-target{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center; gap:4px; padding:4px; border:1px solid var(--line); border-radius:2px; background:none; color:var(--ink-2); font-size:13px; cursor:pointer; touch-action:manipulation;}
+  #settingsModal .marker-target .ruler-icon{width:22px; height:22px;}
+  #settingsModal .marker-target .hl-dot{width:14px; height:14px;}
+  #settingsModal .marker-target[data-role="hl"] .hl-dot{border:1px solid rgba(31,26,20,.18);}
+  #settingsModal .marker-target[aria-pressed="true"]{background:var(--warm-soft); border-color:var(--warm); color:var(--ink);}
+  #settingsModal .marker-target:focus-visible{outline:1.5px solid var(--ink); outline-offset:1px;}
+  #settingsModal .marker-target .marker-color-chip{width:16px; height:16px;}
+  #settingsModal .marker-color-grid{display:grid; grid-template-columns:repeat(5,minmax(44px,1fr)); gap:4px;}
+  #settingsModal .marker-color-choice{min-width:44px; min-height:44px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border:1px solid transparent; border-radius:2px; background:none; color:var(--ink-2); cursor:pointer; touch-action:manipulation;}
+  #settingsModal .marker-color-choice[aria-pressed="true"]{background:var(--warm-soft); border-color:var(--warm); color:var(--ink);}
+  #settingsModal .marker-color-choice:focus-visible{outline:1.5px solid var(--ink); outline-offset:1px;}
+  #settingsModal .marker-color-chip{width:22px; height:22px; flex:none; border:1px solid rgba(31,26,20,.18); border-radius:2px;}
+  #settingsModal .marker-color-choice[data-color="white"] .marker-color-chip{border-color:var(--ink-3);}
   #counterEditModal .counter-edit-label{font-size:13px; color:var(--ink-2); margin-bottom:8px;}
   #counterEditModal .counter-edit-input{width:100%; box-sizing:border-box; text-align:center; font-size:22px; font-family:var(--serif); color:var(--ink); border:1px solid var(--line); border-radius:2px; padding:8px 6px; background:var(--surface); font-variant-numeric:tabular-nums;}
   #counterEditModal .counter-edit-input:focus{outline:1.5px solid var(--ink); border-color:var(--ink);}
@@ -698,8 +725,11 @@
 
 <div id="settingsModal" hidden role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="sheet">
-    <button class="mclose" aria-label="关闭">×</button>
-    <h3 id="settingsTitle">其他设置</h3>
+    <div class="settings-header">
+      <h3 id="settingsTitle">其他设置</h3>
+      <button class="mclose" aria-label="关闭">×</button>
+    </div>
+    <div class="settings-body">
     <label class="settings-option" for="closeCounterTime">
       <input id="closeCounterTime" type="checkbox">
       <span class="toggle-copy">隐藏计数器时间<small>图解累计用时不受影响。</small></span>
@@ -708,6 +738,15 @@
       <input id="keepAwake" type="checkbox">
       <span class="toggle-copy">保持屏幕常亮</span>
     </label>
+    <div class="marker-colors">
+      <div class="rd-title">定位颜色<small>三者分别设置；已有贴纸也一起变色。黑白半透明。</small></div>
+      <div class="marker-targets" role="group" aria-label="选择配色对象">
+        <button type="button" class="marker-target" data-role="h"><span class="marker-color-chip" aria-hidden="true"></span><svg class="ruler-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5h18v7H3zM6 8.5v4.5M9 8.5v2.5M12 8.5v4.5M15 8.5v2.5M18 8.5v4.5M21 8.5v2.5"></path></svg></button>
+        <button type="button" class="marker-target" data-role="v"><span class="marker-color-chip" aria-hidden="true"></span><svg class="ruler-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 3h7v18h-7zM8.5 6h4.5M8.5 9h2.5M8.5 12h4.5M8.5 15h2.5M8.5 18h4.5M8.5 21h2.5"></path></svg></button>
+        <button type="button" class="marker-target" data-role="hl"><span class="marker-color-chip" aria-hidden="true"></span><span class="hl-dot" aria-hidden="true"></span></button>
+      </div>
+      <div class="marker-color-grid" role="group" aria-label="定位颜色"></div>
+    </div>
     <div class="ruler-dir">
       <div class="rd-title">标尺走向<small>轻点标尺，移动一格。</small></div>
       <div class="rd-row">
@@ -720,6 +759,7 @@
         <label title="竖向标尺：向左" aria-label="竖向标尺向左"><input type="radio" name="rulerDirV" value="left">←</label>
         <label title="竖向标尺：向右" aria-label="竖向标尺向右"><input type="radio" name="rulerDirV" value="right">→</label>
       </div>
+    </div>
     </div>
   </div>
 </div>
@@ -864,6 +904,27 @@ const state = {
 const COUNTER_TIME_KEY = "zhiji-show-counter-time-v1";
 let showCounterTime = true;
 try{ showCounterTime = localStorage.getItem(COUNTER_TIME_KEY) !== "0"; }catch(_){ showCounterTime = true; }
+const MARKER_COLOR_KEY = "zhiji-marker-colors-v1";
+const MARKER_COLOR_OPTIONS = [
+  {id:"lake",name:"湖蓝",hex:"#18AFC1",rgb:"24,175,193"},
+  {id:"green",name:"青绿",hex:"#00D59A",rgb:"0,213,154"},
+  {id:"lavender",name:"薰衣草紫",hex:"#9B80B4",rgb:"155,128,180"},
+  {id:"orange",name:"亮橙",hex:"#FF9F0A",rgb:"255,159,10"},
+  {id:"lime",name:"电光柠绿",hex:"#C6FF00",rgb:"198,255,0"},
+  {id:"yellow",name:"亮黄",hex:"#FFE800",rgb:"255,232,0"},
+  {id:"pink",name:"亮粉",hex:"#FF2D95",rgb:"255,45,149"},
+  {id:"black",name:"黑色",hex:"#000000",rgb:"0,0,0"},
+  {id:"white",name:"白色",hex:"#FFFFFF",rgb:"255,255,255"}
+];
+const MARKER_COLOR_BY_ID = Object.fromEntries(MARKER_COLOR_OPTIONS.map(c=>[c.id,c]));
+let markerColors = {h:"lake",v:"lavender",hl:"orange"};
+try{
+  const saved = JSON.parse(localStorage.getItem(MARKER_COLOR_KEY)||"null");
+  if(saved){
+    for(const role of ["h","v","hl"]){ if(MARKER_COLOR_BY_ID[saved[role]]) markerColors[role]=saved[role]; }
+  }
+}catch(_){ /* 坏数据/存储不可用时使用默认颜色 */ }
+
 /* ── 标尺走向：点标尺本体走一格的方向，全局偏好，不进 zhiji-v1（换图解/清记录不受影响）── */
 const RULER_DIR_KEY = "zhiji-ruler-dir-v1";
 let rulerDir = { h: "up", v: "left" };          /* 横尺默认向上，竖尺默认向左 */
@@ -887,6 +948,45 @@ function applyRulerDirRadios(){
   for(const r of m.querySelectorAll("input[name=rulerDirH]")) r.checked = (r.value === rulerDir.h);
   for(const r of m.querySelectorAll("input[name=rulerDirV]")) r.checked = (r.value === rulerDir.v);
 }
+let markerColorTarget="h";
+const MARKER_ROLE_NAMES={h:"横尺",v:"竖尺",hl:"高亮贴"};
+function syncMarkerColorPickers(){
+  for(const b of document.querySelectorAll("#settingsModal .marker-target")){
+    const role=b.dataset.role, color=MARKER_COLOR_BY_ID[markerColors[role]];
+    b.setAttribute("aria-pressed",String(role===markerColorTarget));
+    b.setAttribute("aria-label",`${MARKER_ROLE_NAMES[role]}，当前颜色：${color.name}`);
+    b.title=`${MARKER_ROLE_NAMES[role]}：${color.name}`;
+    b.querySelector(".marker-color-chip").style.backgroundColor=color.hex;
+    const hlDot=b.querySelector(".hl-dot");
+    if(hlDot) hlDot.style.backgroundColor=color.hex;
+  }
+  for(const b of document.querySelectorAll("#settingsModal .marker-color-choice")){
+    const color=MARKER_COLOR_BY_ID[b.dataset.color];
+    b.setAttribute("aria-pressed",String(markerColors[markerColorTarget]===color.id));
+    b.setAttribute("aria-label",`${MARKER_ROLE_NAMES[markerColorTarget]}颜色：${color.name}${color.id==="black"||color.id==="white"?"，半透明":""}`);
+  }
+}
+function buildMarkerColorPickers(){
+  for(const target of document.querySelectorAll("#settingsModal .marker-target")){
+    target.addEventListener("click",()=>{ markerColorTarget=target.dataset.role; syncMarkerColorPickers(); });
+  }
+  const grid=document.querySelector("#settingsModal .marker-color-grid");
+  grid.replaceChildren();
+  for(const color of MARKER_COLOR_OPTIONS){
+    const b=document.createElement("button");
+    b.type="button"; b.className="marker-color-choice"; b.dataset.color=color.id;
+    b.title=(color.id==="black"||color.id==="white")?`${color.name}（半透明）`:color.name;
+    const chip=document.createElement("span"); chip.className="marker-color-chip"; chip.style.backgroundColor=color.hex;
+    b.append(chip);
+    b.addEventListener("click",()=>{
+      markerColors[markerColorTarget]=color.id;
+      saveMarkerColors(); applyMarkerColorStyles(); syncMarkerColorPickers();
+      if(stage.style.display!=="none") renderHls();
+    });
+    grid.appendChild(b);
+  }
+  syncMarkerColorPickers();
+}
 function applyCounterTimeVisibility(){
   document.body.classList.toggle("hide-counter-time", !showCounterTime);
 }
@@ -896,13 +996,37 @@ function saveCounterTimePreference(){
 }
 applyCounterTimeVisibility();
 const YARN = ["--yarn-1","--yarn-2","--yarn-3","--yarn-4","--yarn-5"];
-const HL = {y:["var(--hl-butter)","var(--hl-butter-b)"], p:["var(--hl-clay)","var(--hl-clay-b)"], g:["var(--hl-sage)","var(--hl-sage-b)"]};
 let renderedScale = 1, baseW = 0, baseH = 0;
 
 function toast(msg){
   const t=$("toast"); t.textContent=msg; t.classList.add("show");
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),1800);
 }
+function applyMarkerColorStyles(){
+  const root=document.documentElement.style;
+  const h=MARKER_COLOR_BY_ID[markerColors.h]||MARKER_COLOR_BY_ID.lake;
+  const v=MARKER_COLOR_BY_ID[markerColors.v]||MARKER_COLOR_BY_ID.lavender;
+  const hl=MARKER_COLOR_BY_ID[markerColors.hl]||MARKER_COLOR_BY_ID.orange;
+  const hMono=h.id==="black"||h.id==="white", vMono=v.id==="black"||v.id==="white";
+  const hlMono=hl.id==="black"||hl.id==="white";
+  root.setProperty("--ruler-h-rgb",h.rgb);
+  root.setProperty("--ruler-h-opacity",hMono?".72":"1");
+  root.setProperty("--ruler-v-rgb",v.rgb);
+  root.setProperty("--ruler-v-opacity",vMono?".72":"1");
+  root.setProperty("--highlight-rgb",hl.rgb);
+  root.setProperty("--highlight-fill-alpha",hlMono?".216":".30");
+  root.setProperty("--highlight-edge-alpha",hlMono?".576":".80");
+  const toolbarDot=document.querySelector("#hlY .hl-dot");
+  if(toolbarDot){
+    toolbarDot.style.backgroundColor=hl.hex;
+    toolbarDot.style.boxShadow=hl.id==="white" ? "0 0 0 1px rgba(31,26,20,.35)" : "none";
+  }
+}
+function saveMarkerColors(){
+  try{ localStorage.setItem(MARKER_COLOR_KEY,JSON.stringify(markerColors)); }
+  catch(_){ toast("颜色设置暂时无法保存"); }
+}
+applyMarkerColorStyles();
 
 /* ── 本地保存：标记/计数/位置存 localStorage；PDF 文件太大，存 IndexedDB ── */
 const STORAGE_KEY = "zhiji-v1";
@@ -1099,7 +1223,7 @@ $("fileInput").onchange = async e => {
                                 : mb > 8 ? `文件中等大小，可能稍慢一些 ⏳` : "";
   try{
     const buf = await f.arrayBuffer();
-    state.pdf = await pdfjsLib.getDocument({data: buf}).promise;
+    state.pdf = await pdfjsLib.getDocument({data: buf, wasmUrl: "./wasm/"}).promise;
     releaseImgs();
     state.demo=false; state.img=null;
     /* 把文件本身缓存进 IndexedDB，刷新后自动恢复 */
@@ -1276,6 +1400,16 @@ function flipTo(next){
   flipLock=true;
   state.pageNum += next ? 1 : -1; state.selHl=null;
   Promise.resolve(render()).then(()=>{
+    if(next && state.rulerH && state.rulerH.on && (rulerDir.h==="down" || rulerDir.h==="up")){
+      const h = canvas.clientHeight || baseH || 0;
+      const size = state.rulerHSize || 15;
+      if(h > 0){
+        const inset = (size / 2) / h;
+        state.rulerH.r = rulerDir.h==="down" ? clamp(inset, 0, 1) : clamp(1 - inset, 0, 1);
+        placeRulers();
+        queueSave();
+      }
+    }
     viewer.scrollTop = next ? 0 : viewer.scrollHeight;   // 下一页停顶部、上一页停底部，衔接顺畅
     updateFlipBtns();
     setTimeout(()=>{ flipLock=false; }, 350);
@@ -1904,7 +2038,7 @@ function renderHls(){
     const d=document.createElement("div");
     d.className="hl"+(state.selHl===hl?" sel":"");
     d.style.cssText=`left:${hl.x*W}px;top:${hl.y*H}px;width:${hl.w*W}px;height:${hl.h*H}px;
-      background:${HL[hl.color][0]};border:1px solid ${HL[hl.color][1]}`;
+      background:rgba(var(--highlight-rgb),var(--highlight-fill-alpha,.30));border:1px solid rgba(var(--highlight-rgb),var(--highlight-edge-alpha,.80))`;
     d.innerHTML=`<span class="x" title="删除">×</span><span class="rs">⤡</span>`;
     d.querySelector(".x").onclick=ev=>{ev.stopPropagation(); curHls().splice(i,1); state.selHl=null; renderHls(); queueSave();};
     let moved=false;
@@ -1948,10 +2082,14 @@ function cancelActiveCounterGesture(){
 }
 function addCounter(name){
   const i=state.counters.length;
+  const topbar=$("topbar");
+  const safeTop=topbar && !topbar.classList.contains("hidden")
+    ? Math.max(66, topbar.getBoundingClientRect().bottom + 12)
+    : 66;
   state.counters.push({
     id:Date.now()+Math.random(), name:name||`计数器${i+1}`, value:0,
     color:YARN[i%YARN.length], accum:0, runningSince:nowIfVisible(),
-    x: window.innerWidth-172, y: 66+i*146
+    x: window.innerWidth-172, y: safeTop+i*146
   });
   renderCounters();
 }
@@ -2207,7 +2345,9 @@ $("ptBtn").onclick=()=>{
 $("settingsBtn").onclick=()=>{
   $("closeCounterTime").checked = !showCounterTime;
   $("keepAwake").checked = wantAwake;
+  syncMarkerColorPickers();
   $("settingsModal").hidden=false;
+  $("settingsModal").querySelector(".settings-body").scrollTop=0;
 };
 $("closeCounterTime").addEventListener("change", e=>{
   showCounterTime = !e.target.checked;
@@ -2222,6 +2362,7 @@ $("settingsModal").addEventListener("change", e=>{
   if(e.target.name==="rulerDirV" && e.target.checked){ rulerDir.v=e.target.value; saveRulerDir(); }
 });
 applyRulerDirRadios();   /* 打开面板前先同步一次选中态（刷新后保持） */
+buildMarkerColorPickers();
 $("settingsModal").addEventListener("click", e=>{
   if(e.target.id==="settingsModal" || e.target.classList.contains("mclose")) $("settingsModal").hidden=true;
 });
@@ -2270,30 +2411,75 @@ $("collapseC").onclick=()=>{
   queueSave();
 };
 
-/* ── 屏幕常亮（iPadOS 16.4+ 支持）── */
-let wakeLock=null, wantAwake=false;
+/* ── 屏幕常亮：勾选表示使用意愿；后台释放，回到前台重新申请 ── */
+let wakeLock=null, wantAwake=false, awakeGeneration=0, awakePending=null;
 function syncAwakeSetting(){
   const el=$("keepAwake");
   if(el) el.checked=wantAwake;
 }
+async function acquireAwake(){
+  if(!wantAwake || document.visibilityState!=="visible" || awakePending || (wakeLock && !wakeLock.released)) return;
+  const generation=awakeGeneration;
+  const pending={generation};
+  awakePending=pending;
+  let failureMessage="";
+  try{
+    if(!window.isSecureContext){
+      failureMessage="屏幕常亮需要 HTTPS 安全连接；当前页面不是安全上下文";
+      throw new Error(failureMessage);
+    }
+    if(!navigator.wakeLock || typeof navigator.wakeLock.request!=="function"){
+      failureMessage="此浏览器不支持屏幕常亮";
+      throw new Error(failureMessage);
+    }
+    const lock=await navigator.wakeLock.request("screen");
+    // 关闭、切到后台或再次开启之后，旧请求的结果不能接管新状态。
+    if(generation!==awakeGeneration || !wantAwake || document.visibilityState!=="visible"){
+      await lock.release();
+      return;
+    }
+    if(lock.released){
+      failureMessage="屏幕常亮已被系统释放，请稍后重试";
+      throw new Error(failureMessage);
+    }
+    wakeLock=lock;
+    lock.addEventListener("release",()=>{
+      if(wakeLock===lock) wakeLock=null;
+    },{once:true});
+  }catch(err){
+    if(generation===awakeGeneration && wantAwake && document.visibilityState==="visible"){
+      wantAwake=false;
+      toast(failureMessage || "无法开启常亮：" + err.name + "，请检查浏览器权限或系统限制");
+      syncAwakeSetting();
+    }
+  }finally{
+    if(awakePending===pending) awakePending=null;
+  }
+}
 async function setAwake(on){
   wantAwake=on;
+  const generation=++awakeGeneration;
+  awakePending=null;
   syncAwakeSetting();
-  try{
-    if(on){
-      if(!("wakeLock" in navigator)){ toast("此浏览器不支持屏幕常亮"); wantAwake=false; syncAwakeSetting(); return; }
-      wakeLock = await navigator.wakeLock.request("screen");
-      toast("屏幕常亮已开启");
-    } else if(wakeLock){ await wakeLock.release(); wakeLock=null; toast("屏幕常亮已关闭"); }
-  }catch(err){ toast("无法开启常亮：" + err.name); wantAwake=false; }
-  syncAwakeSetting();
+  if(on){ await acquireAwake(); return; }
+  const lock=wakeLock;
+  wakeLock=null;
+  if(lock){
+    try{ await lock.release(); }
+    catch(err){ if(generation===awakeGeneration) toast("无法释放常亮：" + err.name); }
+  }
 }
 document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState==="visible"){
     resumeTimers();                                          // 回到前台，计时继续
-    if(wantAwake && !wakeLock) setAwake(true);
+    acquireAwake();
   }
   if(document.visibilityState==="hidden"){
+    ++awakeGeneration;
+    awakePending=null;
+    const lock=wakeLock;
+    wakeLock=null;
+    if(lock) lock.release().catch(()=>{});              // 后台不保留过期句柄；迟到事件不能清除新锁
     cancelActiveCounterGesture();                         // 切走时取消未完成的拖动
     pauseTimers();                                           // 切走/关闭，计时暂停
     persistNow();                                            // 立刻把暂停后的进度存下，避免被回收
@@ -2343,7 +2529,7 @@ else { addCounter("行数"); addCounter("花样重复"); }
         await (hadSave ? render() : fitWidth());
         toast(`已恢复上次的图片${rec.name ? "：" + rec.name : ""}`);
       } else {
-        state.pdf = await pdfjsLib.getDocument({data: await rec.blob.arrayBuffer()}).promise;
+        state.pdf = await pdfjsLib.getDocument({data: await rec.blob.arrayBuffer(), wasmUrl: "./wasm/"}).promise;
         state.demo = false; state.img = null;
         state.pageCount = state.pdf.numPages;
         state.pageNum = clamp(typeof state.pageNum === "number" ? state.pageNum : 1, 1, state.pageCount);
