@@ -695,6 +695,13 @@
       <span class="desc">by 翡晔楼 · 把图片变成光栅编织图解</span>
     </span>
   </a>
+  <a href="https://hotstitch4knitting.com/" target="_blank" rel="noopener">
+    <span class="icon">🔊</span>
+    <span class="info">
+      <span class="name">HOT STITCH 提花编织听写器</span>
+      <span class="desc">by Doublecino · 不用看图数格子，它念，你织。</span>
+    </span>
+  </a>
 </div>
 
 <div id="modal" hidden>
@@ -2658,10 +2665,15 @@ const calcMenu=$("calcMenu");
 $("toolsBtn").onclick=e=>{
   e.stopPropagation();
   calcMenu.classList.remove("show");
+  const willOpen=!toolsMenu.classList.contains("show");
+  toolsMenu.classList.toggle("show",willOpen);
+  if(!willOpen) return;
   const r=$("toolsBtn").getBoundingClientRect();
+  const menuWidth=toolsMenu.getBoundingClientRect().width;
+  const left=clamp(r.right-menuWidth,8,Math.max(8,window.innerWidth-menuWidth-8));
   toolsMenu.style.top=(r.bottom+6)+"px";
-  toolsMenu.style.right=(window.innerWidth-r.right)+"px";
-  toolsMenu.classList.toggle("show");
+  toolsMenu.style.left=left+"px";
+  toolsMenu.style.right="auto";
 };
 document.addEventListener("click",()=>{ toolsMenu.classList.remove("show"); calcMenu.classList.remove("show"); });
 toolsMenu.addEventListener("click",e=>e.stopPropagation());
