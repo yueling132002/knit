@@ -94,6 +94,12 @@
   .btn.primary:hover{background:#000;}
   .btn.on{background:var(--ink); border-color:var(--ink); color:var(--bg);}
   .btn.on:hover{background:#000;}
+  #topbar #rateBtn.active{background:rgba(217,119,6,.12); border-color:#d97706; color:#b45309; font-weight:500;}
+  #topbar #rateBtn.active:hover{background:rgba(217,119,6,.18); border-color:#b45309;}
+  @media (prefers-color-scheme: dark){
+    #topbar #rateBtn.active{background:rgba(245,158,11,.15); border-color:#f59e0b; color:#fbbf24;}
+    #topbar #rateBtn.active:hover{background:rgba(245,158,11,.22); border-color:#fbbf24;}
+  }
   .btn[hidden]{display:none;}          /* .btn 的 display 会盖过 [hidden]，这里补回来 */
   .sep{width:1px; height:20px; background:var(--line); margin:0 2px;}
   #pageInfo{font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums; min-width:52px; text-align:center; font-weight:400;
@@ -631,6 +637,7 @@
   <button class="btn" id="syncBtn" title="跨设备同步用时和计数器">🔄<span class="t"> 同步</span></button>
   <button class="btn" id="calcBtn" title="针号&amp;线材换算">🧮<span class="t"> 针号&amp;线材换算</span></button>
   <button class="btn" id="toolsBtn">🔗<span class="t"> 推荐工具</span></button>
+  <button class="btn" id="rateBtn" title="去图解小院找找下一件织什么吧">🪐<span class="t"> 找找编织灵感</span></button>
   <button class="btn" id="fbBtn">🍾<span class="t"> 许愿瓶</span></button>
   <button class="btn" id="tipBtn" hidden>🧡<span class="t"> 打赏</span></button>
   <button class="btn" id="focusBtn">⛶<span class="t"> 隐藏菜单</span></button>
@@ -688,6 +695,13 @@
 <!-- 推荐工具下拉菜单：以后加友情链接在这里加 <a> 即可 -->
 <div id="toolsMenu">
   <div class="menu-hd">编织好工具</div>
+  <a href="https://tujie.plan4you.uk" target="_blank" rel="noopener">
+    <span class="icon">🏡</span>
+    <span class="info">
+      <span class="name">图解小院</span>
+      <span class="desc">为图解打分、查真实线材与编织心得</span>
+    </span>
+  </a>
   <a href="https://illusion-stitch-studio.pages.dev" target="_blank" rel="noopener">
     <span class="icon">🎨</span>
     <span class="info">
@@ -1309,7 +1323,20 @@ async function render(){
   baseW=vp.width; baseH=vp.height; renderedScale=state.scale;
   afterRender();
 }
-function afterRender(){ placeRulers(); renderHls(); updateFlipBtns(); }
+function updateRateBtn(){
+  const btn = $("rateBtn");
+  if(!btn) return;
+  const loaded = Boolean(state.pdf || state.img || state.imgs || state.demo);
+  btn.classList.toggle("active", loaded);
+  if(loaded){
+    btn.innerHTML = '✨<span class="t"> 她们也在织这款</span>';
+    btn.title = "去图解小院看看这款的线材心得与打分";
+  } else {
+    btn.innerHTML = '🪐<span class="t"> 找找编织灵感</span>';
+    btn.title = "去图解小院找找下一件织什么吧";
+  }
+}
+function afterRender(){ placeRulers(); renderHls(); updateFlipBtns(); updateRateBtn(); }
 
 function setPageInfo(current,total,label=""){
   const input=$("pageInput"), slash=$("pageSlash"), totalEl=$("pageTotal");
@@ -2578,6 +2605,23 @@ function openModal(k){
   img.onerror=()=>{ img.style.display="none"; };     /* 没上传二维码就只显示文字 */
   img.src=m.img;
   $("modal").hidden=false;
+}
+if($("rateBtn")){
+  $("rateBtn").onclick = () => {
+    const loaded = Boolean(state.pdf || state.img || state.imgs || state.demo);
+    if(!loaded){
+      window.open("https://tujie.plan4you.uk/", "_blank", "noopener");
+      return;
+    }
+    const name = (proj.name && proj.name !== "我的编织")
+      ? proj.name
+      : (state.demo ? "经典插肩毛衣花样（示例图解）" : (fileBase() || ""));
+    const targetUrl = (name && name !== "我的编织")
+      ? `https://tujie.plan4you.uk/#/?q=${encodeURIComponent(name.trim())}`
+      : "https://tujie.plan4you.uk/";
+    window.open(targetUrl, "_blank", "noopener");
+  };
+  updateRateBtn();
 }
 $("fbBtn").onclick=()=>openModal("fb");
 $("tipBtn").onclick=()=>openModal("tip");
